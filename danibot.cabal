@@ -1,0 +1,31 @@
+Name: danibot
+Version: 0.1.0.0
+Cabal-Version: >=1.8.0.2
+Build-Type: Simple
+License: MIT
+License-File: LICENSE
+Copyright: 2015 Daniel Diaz
+Author: Daniel Diaz
+Maintainer: diaz_carrete@yahoo.com
+Bug-Reports: https://github.com/danidiaz/danibot/issues
+Synopsis: Slack bot.
+Category: Network
+
+Extra-Source-Files:
+    README.md
+    CHANGELOG
+
+Source-Repository head
+    Type: git
+    Location: git@github.com:danidiaz/danibot.git
+
+Library
+    HS-Source-Dirs: src
+    Build-Depends:
+          base          >= 4        && < 5   
+        , wreq          >= 0.4.1.0 
+        , websockets    >= 0.9.6.0
+        , wuss          >= 1.0.2
+    Exposed-Modules:
+        Network.Danibot
+    GHC-Options: -O2 -Wall
