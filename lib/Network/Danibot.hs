@@ -12,7 +12,7 @@ import Options.Applicative
 
 data Configuration = Configuration
     {
-        slackAPIToken :: Text
+        slack_api_token :: Text
     } deriving (Generic,Show)
 
 instance FromJSON Configuration
