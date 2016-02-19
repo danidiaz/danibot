@@ -11,17 +11,26 @@ Bug-Reports: https://github.com/danidiaz/danibot/issues
 Synopsis: Slack bot.
 Category: Network
 
-Extra-Source-Files:
+extra-source-files:
     README.md
     CHANGELOG
 
-Source-Repository head
-    Type: git
-    Location: git@github.com:danidiaz/danibot.git
+source-repository head
+    type: git
+    location: git@github.com:danidiaz/danibot.git
 
-Library
-    HS-Source-Dirs: lib
-    Build-Depends:
+executable danibot
+    hs-source-dirs: exe
+    main-is: Main.hs
+    default-language: Haskell2010
+    ghc-options: -Wall -threaded -O2
+    build-depends:         
+          base >= 4.7 && < 5
+        , danibot
+
+library
+    hs-source-dirs: lib
+    build-depends:
           base          >= 4        && < 5   
         , wreq          >= 0.4.1.0 
         , websockets    >= 0.9.6.0
@@ -30,6 +39,6 @@ Library
         , bytestring    >= 0.10.6.0
         , text          >= 1.2.2.0
         , optparse-applicative  >= 0.12.1.0
-    Exposed-Modules:
+    exposed-modules:
         Network.Danibot
-    GHC-Options: -O2 -Wall
+    ghc-options: -O2 -Wall

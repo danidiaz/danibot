@@ -26,7 +26,7 @@ data Cmdline = Cmdline
 
 parserInfo :: ParserInfo Cmdline
 parserInfo = 
-    info parser infoMod
+    info (helper <*> parser) infoMod
   where
     parser = 
         Cmdline <$> strArgument (help "configuration file" <> metavar "CONF")
