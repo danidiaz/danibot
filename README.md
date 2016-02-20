@@ -15,6 +15,16 @@ Check the info about bot users [here](https://api.slack.com/docs/oauth).
 
 [Strategy for keeping secret info such as API keys out of source control?](http://programmers.stackexchange.com/questions/205606/strategy-for-keeping-secret-info-such-as-api-keys-out-of-source-control)
 
+QUOTES
+======
+
+> To begin a RTM session make an authenticated call to the rtm.start API method.
+> This provides an initial set of team metadata and a message server WebSocket
+> URL. Once you have connected to the message server it will provide a stream of
+> events, including both messages and updates to the current state of the team.
+> This allows a client to easily maintain a synchronized local copy of all team
+> data and messages.
+
 EXAMPLES OF BUILDING SLACK BOTS
 ===============================
 
