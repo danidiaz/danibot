@@ -14,7 +14,6 @@ import qualified Options.Applicative as Options
 import Control.Lens
 import qualified Data.ByteString as Bytes
 import qualified Network.Wreq as Wreq
-import qualified Network.HTTP.Client.TLS as TLS
 
 data Conf = Conf
     {
@@ -40,7 +39,7 @@ parserInfo =
 authOptions :: Text -> Wreq.Options
 authOptions token = 
       set (Wreq.param "token") [token]
-    . set Wreq.manager (Left TLS.tlsManagerSettings)
+--    . set Wreq.manager (Left TLS.tlsManagerSettings)
     $ Wreq.defaults
 
 defaultMain :: IO ()

@@ -41,7 +41,7 @@ library
         , text          >= 1.2.2.0
         , unordered-containers  >= 0.2.5.1
         , optparse-applicative  >= 0.12.1.0
-        , http-client-tls       >= 0.2.2
+        --, http-client-tls       >= 0.2.2
         , lens          >= 4.5
     exposed-modules:
         Network.Danibot
