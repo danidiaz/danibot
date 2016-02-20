@@ -64,26 +64,28 @@ ws connection = do
         message <- Webs.receiveData connection
         print (message :: Text))
 
+exceptionalMain :: ExceptT String IO ()
+exceptionalMain = do
+    args  <- liftIO (Options.execParser parserInfo)
+    bytes <- liftIO (Bytes.readFile (confPath args))
+    conf  <- eitherDecodeStrict' bytes 
+           & either throwE pure
+    let options = authOptions (slack_api_token conf)
+    respJSON <- liftIO (do
+        resp <- Wreq.postWith options "https://slack.com/api/rtm.start" (toJSON ())
+        view Wreq.responseBody <$> Wreq.asJSON resp)
+    url  <- checkResp respJSON 
+          & either throwE pure
+    rest <- Textual.stripPrefix "wss://" url 
+          & maybe (throwE "oops") pure
+    let (host,web) = Textual.break_ True (=='/') rest
+    liftIO (do
+        print (host,web)
+        Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws))
+
 defaultMain :: IO ()
 defaultMain = do
-    args  <- Options.execParser parserInfo
-    bytes <- Bytes.readFile (confPath args)
-    final <- runExceptT (do
-        conf <- eitherDecodeStrict' bytes 
-              & either throwE pure
-        let options = authOptions (slack_api_token conf)
-        respJSON <- liftIO (do
-            resp <- Wreq.postWith options "https://slack.com/api/rtm.start" (toJSON ())
-            view Wreq.responseBody <$> Wreq.asJSON resp)
-        url  <- checkResp respJSON 
-              & either throwE pure
-        rest <- Textual.stripPrefix "wss://" url 
-              & maybe (throwE "oops") pure
-        let (host,web) = Textual.break_ True (=='/') rest
-        liftIO (do
-            print (host,web)
-            Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws))
-    case final of
+    case runExceptT exceptionalMain of
         Left err -> print err
         Right () -> pure ()
 
