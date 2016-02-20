@@ -42,3 +42,7 @@ NOTES
 =====
 
 - Use the bot API token when opening the connection with rtm.start.
+
+- Bots seem to start on the "direct message" channel, but admins can invite
+  them into other channels.
+
