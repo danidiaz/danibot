@@ -28,3 +28,7 @@ http://blog.somewhatabstract.com/2015/03/02/writing-a-simple-slack-bot-with-node
 
 http://blog.simontimms.com/2015/06/07/building-a-simple-slack-bot/
 
+NOTES
+=====
+
+- Use the bot API token when opening the connection with rtm.start.
