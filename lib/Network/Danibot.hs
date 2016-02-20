@@ -67,25 +67,26 @@ ws connection = do
 exceptionalMain :: ExceptT String IO ()
 exceptionalMain = do
     args  <- liftIO (Options.execParser parserInfo)
-    bytes <- liftIO (Bytes.readFile (confPath args))
-    conf  <- eitherDecodeStrict' bytes 
-           & either throwE pure
-    let options = authOptions (slack_api_token conf)
+    conf  <- ExceptT (do
+        bytes <- Bytes.readFile (confPath args)
+        pure (eitherDecodeStrict' bytes))
     respJSON <- liftIO (do
+        let options = authOptions (slack_api_token conf)
         resp <- Wreq.postWith options "https://slack.com/api/rtm.start" (toJSON ())
         view Wreq.responseBody <$> Wreq.asJSON resp)
     url  <- checkResp respJSON 
           & either throwE pure
     rest <- Textual.stripPrefix "wss://" url 
           & maybe (throwE "oops") pure
-    let (host,web) = Textual.break_ True (=='/') rest
     liftIO (do
+        let (host,web) = Textual.break_ True (=='/') rest
         print (host,web)
-        Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws))
+        Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws)
 
 defaultMain :: IO ()
 defaultMain = do
-    case runExceptT exceptionalMain of
+    final <- runExceptT exceptionalMain 
+    case final of
         Left err -> print err
         Right () -> pure ()
 
