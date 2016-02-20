@@ -12,6 +12,8 @@ import Data.Text (Text)
 import qualified Data.Monoid.Cancellative as Textual
 import qualified Data.Monoid.Textual as Textual
 import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Except
 import Control.Lens
 import qualified Network.Wreq as Wreq
 import qualified Wuss
@@ -44,14 +46,14 @@ parserInfo =
 
 authOptions :: Text -> Wreq.Options
 authOptions token = 
-      set (Wreq.param "token") [token]
-    $ Wreq.defaults
+      Wreq.defaults
+    & set (Wreq.param "token") [token]
 
-checkResp :: Value -> Either Text Text
+checkResp :: Value -> Either String Text
 checkResp v =
     case (v^?key "ok"._Bool,v^?key "url"._String,v^?key "error"._String) of
         (Just True ,Just url,_       ) -> Right url
-        (Just False,_       ,Just err) -> Left err
+        (Just False,_       ,Just err) -> Left (Textual.fromText err)
         _                              -> Left "malformed response"
 
 -- copied from wuss examples
@@ -64,23 +66,24 @@ ws connection = do
 
 defaultMain :: IO ()
 defaultMain = do
-    args <- Options.execParser parserInfo
+    args  <- Options.execParser parserInfo
     bytes <- Bytes.readFile (confPath args)
-    case eitherDecodeStrict' bytes of
-        Left e -> print e
-        Right conf -> do
-            print conf 
-            let options = authOptions (slack_api_token conf)
+    final <- runExceptT (do
+        conf <- eitherDecodeStrict' bytes 
+              & either throwE pure
+        let options = authOptions (slack_api_token conf)
+        respJSON <- liftIO (do
             resp <- Wreq.postWith options "https://slack.com/api/rtm.start" (toJSON ())
-            respJSON :: Value <- view Wreq.responseBody <$> Wreq.asJSON resp
-            case checkResp respJSON of
-                Left err  -> print ("there was an error" <> err)
-                Right url -> do
-                    print url 
-                    case (Textual.stripPrefix "wss://" url) of
-                        Nothing -> print "oops!"
-                        Just rest -> do
-                            let (host,web) = Textual.break_ True (=='/') rest
-                            print (host,web)
-                            Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws
+            view Wreq.responseBody <$> Wreq.asJSON resp)
+        url  <- checkResp respJSON 
+              & either throwE pure
+        rest <- Textual.stripPrefix "wss://" url 
+              & maybe (throwE "oops") pure
+        let (host,web) = Textual.break_ True (=='/') rest
+        liftIO (do
+            print (host,web)
+            Wuss.runSecureClient (Textual.fromText host) 443 (Textual.fromText web) ws))
+    case final of
+        Left err -> print err
+        Right () -> pure ()
 
