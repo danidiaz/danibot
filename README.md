@@ -46,3 +46,5 @@ NOTES
 - Bots seem to start on the "direct message" channel, but admins can invite
   them into other channels.
 
+- The messages exchanged in the main API and the rtm seems to have elements in
+  common.
