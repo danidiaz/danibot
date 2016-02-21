@@ -45,5 +45,8 @@ library
         , lens-aeson            >= 1.0.0.0 
         , monoid-subclasses     >= 0.4.2
     exposed-modules:
-        Network.Danibot
+        Network.Danibot.Main
+        Network.Danibot.Slack.Types
+        Network.Danibot.Slack.API
+        Network.Danibot.Slack.RTM
     ghc-options: -O2 -Wall

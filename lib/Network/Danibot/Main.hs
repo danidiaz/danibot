@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Danibot (
+module Network.Danibot.Main (
         defaultMain
     ) where
 

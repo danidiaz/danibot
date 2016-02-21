@@ -2,7 +2,7 @@ module Main (
         main
     ) where
 
-import Network.Danibot
+import Network.Danibot.Main
 
 main :: IO ()
 main = defaultMain 
