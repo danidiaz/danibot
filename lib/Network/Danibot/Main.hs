@@ -19,6 +19,7 @@ import qualified Options.Applicative as Options
 import GHC.Generics
 
 import Network.Danibot.Slack.API (startRTM)
+import Network.Danibot.Slack.Types (url)
 import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
 
 data Conf = Conf
@@ -44,14 +45,15 @@ parserInfo =
 
 exceptionalMain :: ExceptT String IO ()
 exceptionalMain = do
-    args  <- liftIO (Options.execParser parserInfo)
-    conf  <- ExceptT (do
+    args <- liftIO (Options.execParser parserInfo)
+    conf <- ExceptT (do
         bytes <- Bytes.readFile (confPath args)
         pure (eitherDecodeStrict' bytes))
-    uri   <- ExceptT (startRTM (slack_api_token conf))
-    endp  <- fromWSSURI uri
-          & either throwE pure
-    liftIO (loopRTM endp)
+    status <- ExceptT (startRTM (slack_api_token conf))
+    liftIO (print status)
+    endpoint <- fromWSSURI (url status)
+              & either throwE pure
+    liftIO (loopRTM endpoint)
 
 defaultMain :: IO ()
 defaultMain = do

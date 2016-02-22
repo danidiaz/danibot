@@ -2,7 +2,6 @@
 
 module Network.Danibot.Slack.API (
           AuthToken
-        , RTMURI
         , startRTM
     ) where
 
@@ -13,11 +12,11 @@ import Data.Text (Text)
 import qualified Data.Monoid.Textual as Textual
 import qualified Network.Wreq as Wreq
 
+import Network.Danibot.Slack.Types (Initial)
+
 type AuthToken = Text
 
-type RTMURI = Text
-
-startRTM :: AuthToken -> IO (Either String RTMURI)
+startRTM :: AuthToken -> IO (Either String Initial)
 startRTM authToken = do 
     resp <- Wreq.postWith (withToken authToken) 
                           "https://slack.com/api/rtm.start" 
@@ -30,10 +29,10 @@ withToken token =
       Wreq.defaults
     & set (Wreq.param "token") [token]
 
-checkResp :: Value -> Either String RTMURI
+checkResp :: Value -> Either String Initial
 checkResp v =
-    case (v^?key "ok"._Bool,v^?key "url"._String,v^?key "error"._String) of
-        (Just True ,Just url,_       ) -> Right url
-        (Just False,_       ,Just err) -> Left (Textual.fromText err)
-        _                              -> Left "malformed response"
+    case (v^?key "ok"._Bool,v^?_JSON,v^?key "error"._String) of
+        (Just True ,Just info,_       ) -> Right info
+        (Just False,_        ,Just err) -> Left (Textual.fromText err)
+        _                               -> Left "malformed response"
 
