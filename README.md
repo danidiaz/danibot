@@ -48,3 +48,5 @@ NOTES
 
 - The messages exchanged in the main API and the rtm seems to have elements in
   common.
+
+- Most entities have both name and identity fields. IM channel are the exception: they have an identity but not a name. The reason, probably, is that IM channels appear differently to each participant. 
