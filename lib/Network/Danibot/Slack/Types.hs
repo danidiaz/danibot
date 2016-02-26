@@ -1,5 +1,8 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 module Network.Danibot.Slack.Types where
 
@@ -9,8 +12,17 @@ import Data.Text (Text)
 import qualified Data.Monoid.Cancellative as Textual
 import Data.Aeson
 import Data.Aeson.Types
+import Control.Applicative
 
 import GHC.Generics
+
+newtype Wire a = Wire { unwire :: a } deriving (Show,Functor)
+
+(.:$) :: FromJSON (Wire b) => Object -> Text -> Parser b
+v .:$  name = fmap unwire (v .: name)
+
+(.:$$) :: (Functor f,FromJSON (f (Wire b))) => Object -> Text -> Parser (f b)
+v .:$$ name = fmap (fmap unwire) (v .: name)
 
 data Initial = Initial
     {
@@ -25,92 +37,104 @@ data Initial = Initial
 
 instance ToJSON Initial
 
-instance FromJSON Initial
-
+instance FromJSON (Wire Initial) where
+    parseJSON (Object v) = Wire <$> (Initial
+        <$> v .:   "url"
+        <*> v .:$  "self"
+        <*> v .:$  "team"
+        <*> v .:$$ "users"
+        <*> v .:$$ "channels"
+        <*> v .:$$ "groups"
+        <*> v .:$$ "ims")
+    parseJSON _ = empty
+    
 data Self = Self
     {
-        self_id :: Text
-    ,   self_name :: Text
+        selfId :: Text
+    ,   selfName :: Text
     } deriving (Generic,Show)
 
-instance ToJSON Self where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON Self
 
-instance FromJSON Self where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire Self) where
+    parseJSON (Object v) = Wire <$> (Self
+        <$> v .: "id"
+        <*> v .: "name")
+    parseJSON _ = empty
 
 data Team = Team
     {
-        team_id :: Text
-    ,   team_name :: Text
+        teamId :: Text
+    ,   teamName :: Text
     } deriving (Generic,Show)
 
-instance ToJSON Team where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON Team
 
-instance FromJSON Team where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire Team) where
+    parseJSON (Object v) = Wire <$> (Team
+        <$> v .: "id"
+        <*> v .: "name")
+    parseJSON _ = empty
 
 data User = User
     {
-        user_id :: Text
-    ,   user_name :: Text
+        userId :: Text
+    ,   userName :: Text
     } deriving (Generic,Show)
 
-instance ToJSON User where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON User
 
-instance FromJSON User where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire User) where
+    parseJSON (Object v) = Wire <$> (User
+        <$> v .: "id"
+        <*> v .: "name")
+    parseJSON _ = empty
 
 data Channel = Channel
     {
-        channel_id :: Text
-    ,   channel_name :: Text
-    ,   is_member :: Bool
-    ,   is_general :: Bool
+        channelId :: Text
+    ,   channelName :: Text
+    ,   isMember :: Bool
+    ,   isGeneral :: Bool
     } deriving (Generic,Show)
 
-instance ToJSON Channel where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON Channel
 
-instance FromJSON Channel where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire Channel) where
+    parseJSON (Object v) = Wire <$> (Channel
+        <$> v .: "id"
+        <*> v .: "name"
+        <*> v .: "is_member"
+        <*> v .: "is_general")
+    parseJSON _ = empty
 
 data Group = Group
     {
-        group_id :: Text
-    ,   group_name :: Text
+        groupId :: Text
+    ,   groupName :: Text
     ,   members :: [Text]
     } deriving (Generic,Show)
 
-instance ToJSON Group where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON Group
 
-instance FromJSON Group where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire Group) where
+    parseJSON (Object v) = Wire <$> (Group
+        <$> v .: "id"
+        <*> v .: "name"
+        <*> v .: "members")
+    parseJSON _ = empty
 
 data IM = IM
     {
-        im_id :: Text
+        imId :: Text
     ,   user :: Text
     } deriving (Generic,Show)
 
-instance ToJSON IM where
-    toJSON = genericToJSON aesonOptions
+instance ToJSON IM
 
-instance FromJSON IM where
-    parseJSON = genericParseJSON aesonOptions
+instance FromJSON (Wire IM) where
+    parseJSON (Object v) = Wire <$> (IM
+        <$> v .: "id"
+        <*> v .: "user")
+    parseJSON _ = empty
 
-aesonOptions :: Options
-aesonOptions = defaultOptions 
-    { 
-        fieldLabelModifier =
-            let 
-            modified field = do
-                (suffix,replacement) <- [("_id","id"),("_name","name")]
-                guard (Textual.isSuffixOf (suffix::Text) (fromString field))
-                pure replacement 
-            in  \f -> head (modified f ++ [f])
-            
-    }
