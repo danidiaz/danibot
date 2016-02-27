@@ -53,3 +53,4 @@ NOTES
 
 - The message_changed and message_deleted events do not have a "text" field as the top level.
 
+- "<@U0MKNPE9Y>: the message text".
