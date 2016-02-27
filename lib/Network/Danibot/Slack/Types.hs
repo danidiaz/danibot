@@ -51,7 +51,7 @@ instance FromJSON (Wire Intro) where
             <*> (mapify <$> c .: "groups")
             <*> (mapify <$> c .: "ims")
         mapify es = 
-            Map.fromList (map (\i -> (identity i,unwire i)) es)
+            Map.fromList (zip (map identity es) (map unwire es))
         in
         Wire <$> introParser v
     parseJSON _ = empty
