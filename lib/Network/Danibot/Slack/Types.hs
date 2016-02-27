@@ -6,11 +6,10 @@
 
 module Network.Danibot.Slack.Types where
 
-import Control.Applicative
-import Control.Monad
-import Data.String (fromString)
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Monoid.Cancellative as Textual
 import Data.Aeson
 import Data.Aeson.Types
@@ -40,30 +39,30 @@ instance ToJSON Intro
 instance FromJSON (Wire Intro) where
     parseJSON (Object v) = 
         let
-        introParser i = Intro
+        introParser = Intro
             <$> v .: "url"
-            <*> chatParser v
-        chatParser c = Chat
-            <$> (unwire <$> c .: "self")
-            <*> (unwire <$> c .: "team")
-            <*> (mapify <$> c .: "users")
-            <*> (mapify <$> c .: "channels")
-            <*> (mapify <$> c .: "groups")
-            <*> (mapify <$> c .: "ims")
+            <*> chatParser 
+        chatParser = Chat
+            <$> (unwire <$> v .: "self")
+            <*> (unwire <$> v .: "team")
+            <*> (mapify <$> v .: "users")
+            <*> (mapify <$> v .: "channels")
+            <*> (mapify <$> v .: "groups")
+            <*> (mapify <$> v .: "ims")
         mapify es = 
             Map.fromList (zip (map identity es) (map unwire es))
         in
-        Wire <$> introParser v
+        Wire <$> introParser
     parseJSON _ = empty
 
 data Chat = Chat
     {
         self :: Self
     ,   team :: Team
-    ,   users :: Map.Map Text User
-    ,   channels :: Map.Map Text Channel
-    ,   groups :: Map.Map Text Group
-    ,   ims :: Map.Map Text IM
+    ,   users :: Map Text User
+    ,   channels :: Map Text Channel
+    ,   groups :: Map Text Group
+    ,   ims :: Map Text IM
     } deriving (Generic,Show)
 
 instance ToJSON Chat
@@ -190,4 +189,46 @@ instance FromJSON (Wire IM) where
         <$> v .: "id"
         <*> v .: "user")
     parseJSON _ = empty
+
+data Message = Message {
+        messageTs :: Text
+    ,   messageText :: Text
+    ,   messageValue :: Either Value UserMessage
+    } deriving (Generic,Show)
+
+instance ToJSON Message
+
+data Me = Me | NotMe deriving (Generic,Show)
+
+instance ToJSON Me
+
+data UserMessage = UserMessage 
+    {
+        messageChannel :: Text
+    ,   messageUser :: Text
+    ,   messageMe :: Me
+    } deriving (Generic,Show)
+
+instance ToJSON UserMessage
+
+instance FromJSON (Wire Message) where
+    parseJSON (Object v) = Wire <$> (do
+        ts <- v .: "ts" 
+        text <- v .:? "text" .!= ""
+        subtype <- v .:? "subtype" .!= Text.empty
+        let me = if subtype == "me_message" 
+            then Me 
+            else NotMe 
+        msgval <- if any (==subtype) ["","me_message"]
+            then do
+                channel_ <- v .: "channel"
+                user_ <- v .: "user"
+                pure (Right (UserMessage channel_ user_ me))
+            else 
+                pure (Left (Object v))
+        pure (Message ts text msgval))
+    parseJSON _ = empty
+
+
+
 
