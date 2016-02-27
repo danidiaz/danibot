@@ -12,11 +12,11 @@ import Data.Text (Text)
 import qualified Data.Monoid.Textual as Textual
 import qualified Network.Wreq as Wreq
 
-import Network.Danibot.Slack.Types (Wire(..),Initial)
+import Network.Danibot.Slack.Types (Wire(..),Intro)
 
 type AuthToken = Text
 
-startRTM :: AuthToken -> IO (Either String Initial)
+startRTM :: AuthToken -> IO (Either String Intro)
 startRTM authToken = do 
     resp <- Wreq.postWith (withToken authToken) 
                           "https://slack.com/api/rtm.start" 
@@ -29,7 +29,7 @@ withToken token =
       Wreq.defaults
     & set (Wreq.param "token") [token]
 
-checkResp :: Value -> Either String Initial
+checkResp :: Value -> Either String Intro
 checkResp v =
     case (v^?key "ok"._Bool,fromJSON v,v^?key "error"._String) of
         (Just True ,Success (Wire info),_) -> Right info

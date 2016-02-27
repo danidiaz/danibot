@@ -6,8 +6,10 @@
 
 module Network.Danibot.Slack.Types where
 
+import Control.Applicative
 import Control.Monad
 import Data.String (fromString)
+import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Monoid.Cancellative as Textual
 import Data.Aeson
@@ -18,41 +20,65 @@ import GHC.Generics
 
 newtype Wire a = Wire { unwire :: a } deriving (Show,Functor)
 
-(.:$) :: FromJSON (Wire b) => Object -> Text -> Parser b
-v .:$  name = fmap unwire (v .: name)
+instance Identified i => Identified (Wire i) where
+    identity (Wire i) = identity i
 
-(.:$$) :: (Functor f,FromJSON (f (Wire b))) => Object -> Text -> Parser (f b)
-v .:$$ name = fmap (fmap unwire) (v .: name)
+class Identified i where
+    identity :: i -> Text
 
-data Initial = Initial
+class Named n where
+    name :: n -> Text
+
+data Intro = Intro
     {
         url :: Text
-    ,   self :: Self
-    ,   team :: Team
-    ,   users :: [User]
-    ,   channels :: [Channel]
-    ,   groups :: [Group]
-    ,   ims :: [IM]
+    ,   chat :: Chat
     } deriving (Generic,Show)
 
-instance ToJSON Initial
+instance ToJSON Intro
 
-instance FromJSON (Wire Initial) where
-    parseJSON (Object v) = Wire <$> (Initial
-        <$> v .:   "url"
-        <*> v .:$  "self"
-        <*> v .:$  "team"
-        <*> v .:$$ "users"
-        <*> v .:$$ "channels"
-        <*> v .:$$ "groups"
-        <*> v .:$$ "ims")
+instance FromJSON (Wire Intro) where
+    parseJSON (Object v) = 
+        let
+        introParser i = Intro
+            <$> v .: "url"
+            <*> chatParser v
+        chatParser c = Chat
+            <$> (unwire <$> c .: "self")
+            <*> (unwire <$> c .: "team")
+            <*> (mapify <$> c .: "users")
+            <*> (mapify <$> c .: "channels")
+            <*> (mapify <$> c .: "groups")
+            <*> (mapify <$> c .: "ims")
+        mapify es = 
+            Map.fromList (map (\i -> (identity i,unwire i)) es)
+        in
+        Wire <$> introParser v
     parseJSON _ = empty
-    
+
+data Chat = Chat
+    {
+        self :: Self
+    ,   team :: Team
+    ,   users :: Map.Map Text User
+    ,   channels :: Map.Map Text Channel
+    ,   groups :: Map.Map Text Group
+    ,   ims :: Map.Map Text IM
+    } deriving (Generic,Show)
+
+instance ToJSON Chat
+
 data Self = Self
     {
         selfId :: Text
     ,   selfName :: Text
     } deriving (Generic,Show)
+
+instance Identified Self where
+    identity = selfId
+
+instance Named Self where
+    name = selfName
 
 instance ToJSON Self
 
@@ -68,6 +94,12 @@ data Team = Team
     ,   teamName :: Text
     } deriving (Generic,Show)
 
+instance Identified Team where
+    identity = teamId
+
+instance Named Team where
+    name = teamName
+
 instance ToJSON Team
 
 instance FromJSON (Wire Team) where
@@ -81,6 +113,12 @@ data User = User
         userId :: Text
     ,   userName :: Text
     } deriving (Generic,Show)
+
+instance Identified User where
+    identity = userId
+
+instance Named User where
+    name = userName
 
 instance ToJSON User
 
@@ -97,6 +135,12 @@ data Channel = Channel
     ,   isMember :: Bool
     ,   isGeneral :: Bool
     } deriving (Generic,Show)
+
+instance Identified Channel where
+    identity = channelId
+
+instance Named Channel where
+    name = channelName
 
 instance ToJSON Channel
 
@@ -115,6 +159,12 @@ data Group = Group
     ,   members :: [Text]
     } deriving (Generic,Show)
 
+instance Identified Group where
+    identity = groupId
+
+instance Named Group where
+    name = groupName
+
 instance ToJSON Group
 
 instance FromJSON (Wire Group) where
@@ -129,6 +179,9 @@ data IM = IM
         imId :: Text
     ,   user :: Text
     } deriving (Generic,Show)
+
+instance Identified IM where
+    identity = imId
 
 instance ToJSON IM
 
