@@ -55,5 +55,5 @@ NOTES
 
 - "<@U0MKNPE9Y>: the message text". The bot should respond to messages explicitly addressed to him in public channels and to every message in IM channels (messages in IM channels might be explicitly addressed as well).
 
-
+- Remember to parse message confirmations.
 
