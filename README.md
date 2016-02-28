@@ -53,4 +53,7 @@ NOTES
 
 - The message_changed and message_deleted events do not have a "text" field as the top level.
 
-- "<@U0MKNPE9Y>: the message text".
+- "<@U0MKNPE9Y>: the message text". The bot should respond to messages explicitly addressed to him in public channels and to every message in IM channels (messages in IM channels might be explicitly addressed as well).
+
+
+

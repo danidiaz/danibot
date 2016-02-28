@@ -46,8 +46,10 @@ library
         , monoid-subclasses     >= 0.4.2
         , containers            >= 0.5
         , conceit               >= 0.4.0.0
+        , attoparsec            >= 0.13
     exposed-modules:
         Network.Danibot.Main
+        Network.Danibot.Slack
         Network.Danibot.Slack.Types
         Network.Danibot.Slack.API
         Network.Danibot.Slack.RTM
