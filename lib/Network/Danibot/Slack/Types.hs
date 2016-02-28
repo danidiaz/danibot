@@ -271,3 +271,20 @@ instance FromJSON (Wire Event) where
             _ -> pure (GeneralEvent (Object v)))   
     parseJSON _ = empty
 
+data OutboundMessage = OutboundMessage
+    {
+        outboundMessageID :: Integer
+    ,   outboundMessageChannel :: Text 
+    ,   outboundMessageText :: Text 
+    } deriving (Generic,Show) 
+
+instance ToJSON OutboundMessage
+
+instance ToJSON (Wire OutboundMessage) where
+    toJSON (Wire (OutboundMessage msgid ch txt)) = object [
+          "type" .= ("message" :: Text)
+        , "id" .= msgid
+        , "channel" .= ch 
+        , "text" .= txt
+        ]
+

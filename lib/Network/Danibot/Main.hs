@@ -20,7 +20,7 @@ import GHC.Generics
 
 import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.Types (url)
-import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
+import Network.Danibot.Slack.RTM (fromWSSURI,mute,loopRTM)
 
 data Conf = Conf
     {
@@ -53,7 +53,7 @@ exceptionalMain = do
     liftIO (print status)
     endpoint <- fromWSSURI (url status)
               & either throwE pure
-    liftIO (loopRTM endpoint)
+    liftIO (loopRTM endpoint print mute)
 
 defaultMain :: IO ()
 defaultMain = do

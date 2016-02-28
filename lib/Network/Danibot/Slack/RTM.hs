@@ -2,15 +2,25 @@
 
 module Network.Danibot.Slack.RTM (
           fromWSSURI
+        , mute
         , loopRTM
     ) where
 
-import Control.Monad
 import qualified Data.Monoid.Cancellative as Textual
 import qualified Data.Monoid.Textual as Textual
 import Data.Text (Text)
+import Data.ByteString (ByteString)
+import qualified Data.ByteString 
+import Data.Aeson (eitherDecode',encode)
+import Control.Monad
+import Control.Monad.Trans.Except
+import Control.Exception
+import Control.Concurrent.MVar
+import Control.Concurrent.Conceit
 import qualified Wuss
 import qualified Network.WebSockets as Webs
+
+import Network.Danibot.Slack.Types(Wire(..),Event(..),OutboundMessage(..))
 
 data WSSEndpoint = WSSEndpoint
     {
@@ -25,18 +35,32 @@ fromWSSURI uri =
         Just uri' -> case Textual.break_ True (=='/') uri' of
             (host,web) -> Right (WSSEndpoint host web)
 
--- copied from wuss examples
-ws :: Webs.ClientApp ()
-ws connection = do
-    putStrLn "Connected!"
-    forever (do
-        message <- Webs.receiveData connection
-        print (message::Text))
+ws :: (Event -> IO ()) 
+   -> IO OutboundMessage 
+   -> Webs.ClientApp ()
+ws handler emitter connection = 
+    let conceited =
+            (_Conceit (forever (do
+                outbound <- emitter
+                let outboundBytes = encode (Wire outbound)
+                Webs.sendBinaryData connection outboundBytes)))
+            *> 
+            (_Conceit (forever (do
+                message <- Webs.receiveData connection
+                case eitherDecode' message of
+                    Left errmsg -> 
+                        throwIO (userError ("Malformed msg: " ++ errmsg))
+                    Right (Wire event) -> 
+                        handler event)))
+    in _runConceit conceited
 
-loopRTM :: WSSEndpoint -> IO ()
-loopRTM (WSSEndpoint host path) = do  
+mute :: IO a
+mute = newEmptyMVar >>= takeMVar
+     
+loopRTM :: WSSEndpoint -> (Event -> IO ()) -> IO OutboundMessage -> IO ()
+loopRTM (WSSEndpoint host path) eventHandler messageEmitter = do  
     print (host,path)
     Wuss.runSecureClient (Textual.fromText host) 
                          443
                          (Textual.fromText path) 
-                         ws
+                         (ws eventHandler messageEmitter) 
