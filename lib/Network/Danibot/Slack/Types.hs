@@ -192,7 +192,6 @@ instance FromJSON (Wire IM) where
 
 data Message = Message {
         messageTs :: Text
-    ,   messageText :: Text
     ,   messageValue :: Either Value UserMessage
     } deriving (Generic,Show)
 
@@ -206,6 +205,7 @@ data UserMessage = UserMessage
     {
         messageChannel :: Text
     ,   messageUser :: Text
+    ,   messageText :: Text
     ,   messageMe :: Me
     } deriving (Generic,Show)
 
@@ -214,7 +214,6 @@ instance ToJSON UserMessage
 instance FromJSON (Wire Message) where
     parseJSON (Object v) = Wire <$> (do
         ts <- v .: "ts" 
-        text <- v .:? "text" .!= ""
         subtype <- v .:? "subtype" .!= Text.empty
         let me = if subtype == "me_message" 
             then Me 
@@ -222,13 +221,53 @@ instance FromJSON (Wire Message) where
         msgval <- if any (==subtype) ["","me_message"]
             then do
                 channel_ <- v .: "channel"
-                user_ <- v .: "user"
-                pure (Right (UserMessage channel_ user_ me))
+                user_    <- v .: "user"
+                text_    <- v .: "text" 
+                pure (Right (UserMessage channel_ user_ text_ me))
             else 
                 pure (Left (Object v))
-        pure (Message ts text msgval))
+        pure (Message ts msgval))
     parseJSON _ = empty
 
+data ChannelUser = ChannelUser
+    {
+        cuChannel :: Text
+    ,   cuUser :: Text
+    } deriving (Generic,Show)
 
+instance ToJSON ChannelUser
 
+instance FromJSON (Wire ChannelUser) where
+    parseJSON (Object v) = Wire <$> (ChannelUser
+        <$> v .: "channel"
+        <*> v .: "user")
+    parseJSON _ = empty
+
+data Event =
+      HelloEvent
+    | MessageEvent Message
+    | UserTypingEvent ChannelUser
+    | IMOpen ChannelUser
+    | IMClose ChannelUser
+    | GeneralEvent Value 
+    deriving (Generic,Show)
+
+instance ToJSON Event
+
+instance FromJSON (Wire Event) where
+    parseJSON (Object v) = Wire <$> (do
+        eventType <- v .: "type"
+        case eventType :: Text of
+            "hello" -> 
+                pure HelloEvent 
+            "message" -> 
+                MessageEvent . unwire <$> parseJSON (Object v)
+            "user_typing" -> 
+                UserTypingEvent . unwire <$> parseJSON (Object v)
+            "im_open" -> 
+                IMOpen . unwire <$> parseJSON (Object v)
+            "im_close" -> 
+                IMClose . unwire <$> parseJSON (Object v)
+            _ -> pure (GeneralEvent (Object v)))   
+    parseJSON _ = empty
 
