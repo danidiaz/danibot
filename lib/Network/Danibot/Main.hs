@@ -18,7 +18,7 @@ import qualified Options.Applicative as Options
 
 import GHC.Generics
 
-import Network.Danibot.Slack.Types (url)
+import Network.Danibot.Slack.Types (introUrl)
 import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
 import Network.Danibot.Slack (mute)
@@ -50,9 +50,9 @@ exceptionalMain = do
     conf <- ExceptT (do
         bytes <- Bytes.readFile (confPath args)
         pure (eitherDecodeStrict' bytes))
-    status <- ExceptT (startRTM (slack_api_token conf))
-    liftIO (print status)
-    endpoint <- fromWSSURI (url status)
+    intro <- ExceptT (startRTM (slack_api_token conf))
+    liftIO (print intro)
+    endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
     liftIO (loopRTM endpoint print mute)
 

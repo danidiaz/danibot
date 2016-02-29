@@ -7,7 +7,7 @@
 
 module Network.Danibot.Slack.Types where
 
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -31,8 +31,8 @@ class Named n where
 
 data Intro = Intro
     {
-        url :: Text
-    ,   chat :: Chat
+        introUrl :: Text
+    ,   introChat :: Chat
     } deriving (Generic,Show)
 
 instance ToJSON Intro
@@ -58,13 +58,20 @@ instance FromJSON (Wire Intro) where
 
 data Chat = Chat
     {
-        self :: Self
-    ,   team :: Team
-    ,   users :: Map Text User
-    ,   channels :: Map Text Channel
-    ,   groups :: Map Text Group
-    ,   ims :: Map Text IM
+        self :: !Self
+    ,   team :: !Team
+    ,   users :: !(Map Text User)
+    ,   channels :: !(Map Text Channel)
+    ,   groups :: !(Map Text Group)
+    ,   ims :: !(Map Text IM)
     } deriving (Generic,Show,ToJSON)
+
+data ChatWrap = ChatWrap
+    {
+        chat  :: !Chat
+    ,   nextMessageId :: !Integer
+    } deriving (Generic,Show,ToJSON)
+
 
 data Self = Self
     {
@@ -252,7 +259,7 @@ instance FromJSON (Wire Event) where
 
 data OutboundMessage = OutboundMessage
     {
-        outboundMessageID :: Integer
+        outboundMessageId :: Integer
     ,   outboundMessageChannel :: Text 
     ,   outboundMessageText :: Text 
     } deriving (Generic,Show,ToJSON) 
