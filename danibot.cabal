@@ -47,6 +47,7 @@ library
         , containers            >= 0.5
         , conceit               >= 0.4.0.0
         , attoparsec            >= 0.13
+        , profunctors           >= 5.2
     exposed-modules:
         Network.Danibot.Main
         Network.Danibot.Slack
