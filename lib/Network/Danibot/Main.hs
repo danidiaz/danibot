@@ -18,9 +18,10 @@ import qualified Options.Applicative as Options
 
 import GHC.Generics
 
-import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.Types (url)
-import Network.Danibot.Slack.RTM (fromWSSURI,mute,loopRTM)
+import Network.Danibot.Slack.API (startRTM)
+import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
+import Network.Danibot.Slack (mute)
 
 data Conf = Conf
     {

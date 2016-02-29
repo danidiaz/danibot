@@ -2,7 +2,6 @@
 
 module Network.Danibot.Slack.RTM (
           fromWSSURI
-        , mute
         , loopRTM
     ) where
 
@@ -15,7 +14,6 @@ import Data.Aeson (eitherDecode',encode)
 import Control.Monad
 import Control.Monad.Trans.Except
 import Control.Exception
-import Control.Concurrent.MVar
 import Control.Concurrent.Conceit
 import qualified Wuss
 import qualified Network.WebSockets as Webs
@@ -54,9 +52,6 @@ ws handler emitter connection =
                         handler event)))
     in _runConceit conceited
 
-mute :: IO a
-mute = newEmptyMVar >>= takeMVar
-     
 loopRTM :: WSSEndpoint -> (Event -> IO ()) -> IO OutboundMessage -> IO ()
 loopRTM (WSSEndpoint host path) eventHandler messageEmitter = do  
     print (host,path)

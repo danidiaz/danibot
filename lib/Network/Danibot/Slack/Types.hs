@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Network.Danibot.Slack.Types where
 
@@ -63,23 +64,19 @@ data Chat = Chat
     ,   channels :: Map Text Channel
     ,   groups :: Map Text Group
     ,   ims :: Map Text IM
-    } deriving (Generic,Show)
-
-instance ToJSON Chat
+    } deriving (Generic,Show,ToJSON)
 
 data Self = Self
     {
         selfId :: Text
     ,   selfName :: Text
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified Self where
     identity = selfId
 
 instance Named Self where
     name = selfName
-
-instance ToJSON Self
 
 instance FromJSON (Wire Self) where
     parseJSON (Object v) = Wire <$> (Self
@@ -91,15 +88,13 @@ data Team = Team
     {
         teamId :: Text
     ,   teamName :: Text
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified Team where
     identity = teamId
 
 instance Named Team where
     name = teamName
-
-instance ToJSON Team
 
 instance FromJSON (Wire Team) where
     parseJSON (Object v) = Wire <$> (Team
@@ -111,15 +106,13 @@ data User = User
     {
         userId :: Text
     ,   userName :: Text
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified User where
     identity = userId
 
 instance Named User where
     name = userName
-
-instance ToJSON User
 
 instance FromJSON (Wire User) where
     parseJSON (Object v) = Wire <$> (User
@@ -133,15 +126,13 @@ data Channel = Channel
     ,   channelName :: Text
     ,   isMember :: Bool
     ,   isGeneral :: Bool
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified Channel where
     identity = channelId
 
 instance Named Channel where
     name = channelName
-
-instance ToJSON Channel
 
 instance FromJSON (Wire Channel) where
     parseJSON (Object v) = Wire <$> (Channel
@@ -156,15 +147,13 @@ data Group = Group
         groupId :: Text
     ,   groupName :: Text
     ,   members :: [Text]
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified Group where
     identity = groupId
 
 instance Named Group where
     name = groupName
-
-instance ToJSON Group
 
 instance FromJSON (Wire Group) where
     parseJSON (Object v) = Wire <$> (Group
@@ -177,12 +166,10 @@ data IM = IM
     {
         imId :: Text
     ,   user :: Text
-    } deriving (Generic,Show)
+    } deriving (Generic,Show,ToJSON)
 
 instance Identified IM where
     identity = imId
-
-instance ToJSON IM
 
 instance FromJSON (Wire IM) where
     parseJSON (Object v) = Wire <$> (IM
@@ -193,9 +180,7 @@ instance FromJSON (Wire IM) where
 data Message = Message {
         messageTs :: Text
     ,   messageValue :: Either Value UserMessage
-    } deriving (Generic,Show)
-
-instance ToJSON Message
+    } deriving (Generic,Show,ToJSON)
 
 data Me = Me | NotMe deriving (Generic,Show)
 
@@ -207,9 +192,7 @@ data UserMessage = UserMessage
     ,   messageUser :: Text
     ,   messageText :: Text
     ,   messageMe :: Me
-    } deriving (Generic,Show)
-
-instance ToJSON UserMessage
+    } deriving (Generic,Show,ToJSON)
 
 instance FromJSON (Wire Message) where
     parseJSON (Object v) = Wire <$> (do
@@ -233,9 +216,7 @@ data ChannelUser = ChannelUser
     {
         cuChannel :: Text
     ,   cuUser :: Text
-    } deriving (Generic,Show)
-
-instance ToJSON ChannelUser
+    } deriving (Generic,Show,ToJSON)
 
 instance FromJSON (Wire ChannelUser) where
     parseJSON (Object v) = Wire <$> (ChannelUser
@@ -250,9 +231,7 @@ data Event =
     | IMOpen ChannelUser
     | IMClose ChannelUser
     | GeneralEvent Value 
-    deriving (Generic,Show)
-
-instance ToJSON Event
+    deriving (Generic,Show,ToJSON)
 
 instance FromJSON (Wire Event) where
     parseJSON (Object v) = Wire <$> (do
@@ -276,9 +255,7 @@ data OutboundMessage = OutboundMessage
         outboundMessageID :: Integer
     ,   outboundMessageChannel :: Text 
     ,   outboundMessageText :: Text 
-    } deriving (Generic,Show) 
-
-instance ToJSON OutboundMessage
+    } deriving (Generic,Show,ToJSON) 
 
 instance ToJSON (Wire OutboundMessage) where
     toJSON (Wire (OutboundMessage msgid ch txt)) = object [
