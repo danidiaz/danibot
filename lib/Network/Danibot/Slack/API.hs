@@ -12,7 +12,7 @@ import Data.Text (Text)
 import qualified Data.Monoid.Textual as Textual
 import qualified Network.Wreq as Wreq
 
-import Network.Danibot.Slack.Types (Wire(..),Intro)
+import Network.Danibot.Slack.Types (Wire(..),Intro(..))
 
 type AuthToken = Text
 

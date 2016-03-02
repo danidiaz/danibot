@@ -66,11 +66,12 @@ data Chat = Chat
     ,   ims :: !(Map Text IM)
     } deriving (Generic,Show,ToJSON)
 
-data ChatWrap = ChatWrap
-    {
-        chat  :: !Chat
-    ,   nextMessageId :: !Integer
-    } deriving (Generic,Show,ToJSON)
+
+--data ChatWrap = ChatWrap
+--    {
+--        chat  :: !Chat
+--    ,   nextMessageId :: !Integer
+--    } deriving (Generic,Show,ToJSON)
 
 
 data Self = Self

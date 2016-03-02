@@ -1,0 +1,1 @@
+- Remove ChannelUser type, change it into a ChannelId and UserId newtypes.
