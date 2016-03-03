@@ -13,8 +13,15 @@ import qualified Data.ByteString
 import Data.Aeson (eitherDecode',encode)
 import Control.Monad
 import Control.Monad.Trans.Except
+import Control.Monad.IO.Class
 import Control.Exception
 import Control.Concurrent.Conceit
+import Control.Foldl (FoldM)
+import qualified Control.Foldl as Foldl
+import Streaming (Stream)
+import Streaming.Prelude (Of)
+import qualified Streaming as Streaming
+import qualified Streaming.Prelude as Streaming
 import qualified Wuss
 import qualified Network.WebSockets as Webs
 
@@ -33,26 +40,29 @@ fromWSSURI uri =
         Just uri' -> case Textual.break_ True (=='/') uri' of
             (host,web) -> Right (WSSEndpoint host web)
 
-ws :: (Event -> IO ()) 
-   -> IO OutboundMessage 
+ws :: FoldM IO Event ()
+   -> Stream (Of OutboundMessage) IO ()
    -> Webs.ClientApp ()
-ws handler emitter connection = 
+ws eventFold messageStream connection = 
     let conceited =
-            (_Conceit (forever (do
-                outbound <- emitter
-                let outboundBytes = encode (Wire outbound)
-                Webs.sendBinaryData connection outboundBytes)))
+            (_Conceit (Foldl.impurely Streaming.foldM_ eventFold eventStream))
             *> 
-            (_Conceit (forever (do
-                message <- Webs.receiveData connection
-                case eitherDecode' message of
-                    Left errmsg -> 
-                        throwIO (userError ("Malformed msg: " ++ errmsg))
-                    Right (Wire event) -> 
-                        handler event)))
+            (_Conceit (Streaming.mapM_ sendMessage messageStream))
+        eventStream = forever (do
+            message <- liftIO (Webs.receiveData connection)
+            case eitherDecode' message of
+                Left errmsg -> 
+                    liftIO (throwIO (userError ("Malformed msg: " ++ errmsg)))
+                Right (Wire event) -> 
+                    Streaming.yield event)
+        sendMessage = Webs.sendBinaryData connection . encode . Wire
     in _runConceit conceited
 
-loopRTM :: WSSEndpoint -> (Event -> IO ()) -> IO OutboundMessage -> IO ()
+
+loopRTM :: WSSEndpoint 
+        -> FoldM IO Event ()
+        -> Stream (Of OutboundMessage) IO ()
+        -> IO ()
 loopRTM (WSSEndpoint host path) eventHandler messageEmitter = do  
     print (host,path)
     Wuss.runSecureClient (Textual.fromText host) 

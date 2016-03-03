@@ -6,22 +6,24 @@ module Network.Danibot.Main (
         defaultMain
     ) where
 
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Except
 import Data.Function ((&))
 import qualified Data.ByteString as Bytes
 import Data.Text (Text)
 import Data.Aeson (FromJSON,eitherDecodeStrict')
-import Options.Applicative 
-import qualified Options.Applicative as Options
+
+import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Except
+import qualified Control.Foldl as Foldl
 
 import GHC.Generics
+
+import Options.Applicative 
+import qualified Options.Applicative as Options
 
 import Network.Danibot.Slack.Types (introUrl)
 import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
-import Network.Danibot.Slack (mute)
 
 data Conf = Conf
     {
@@ -54,7 +56,7 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    liftIO (loopRTM endpoint print mute)
+    liftIO (loopRTM endpoint (Foldl.mapM_ print) (pure ()))
 
 defaultMain :: IO ()
 defaultMain = do

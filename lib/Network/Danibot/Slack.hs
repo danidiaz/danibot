@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Danibot.Slack (isDirectedTo,mute) where
+module Network.Danibot.Slack (isDirectedTo) where
 
 import Data.Text (Text)
 import Data.Char
@@ -11,14 +11,13 @@ import Control.Applicative
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
 
+import Streaming (Stream)
+
 import Network.Danibot.Slack.Types (Event,
                                     UserMessage(..),
                                     Chat(..),
                                     Event(..),
                                     ChannelUser(..))
-
-mute :: IO a
-mute = newEmptyMVar >>= takeMVar
 
 handlers :: [Event -> IO ()] -> Event -> IO () 
 handlers = runStar . foldr (*>) (pure ()) . map Star

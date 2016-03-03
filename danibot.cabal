@@ -47,8 +47,10 @@ library
         , containers            >= 0.5
         , conceit               >= 0.4.0.0
         , attoparsec            >= 0.13
-        , profunctors           >= 5.2
+        , profunctors           >= 5.2 
         , stm                   >= 2.4.4
+        , foldl                 >= 1.1.5
+        , streaming             >= 0.1.4
     exposed-modules:
         Network.Danibot.Main
         Network.Danibot.Slack
