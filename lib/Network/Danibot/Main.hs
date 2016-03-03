@@ -56,7 +56,7 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    liftIO (loopRTM endpoint (Foldl.mapM_ print) (pure ()))
+    liftIO (loopRTM (Foldl.mapM_ print) (pure ()) endpoint)
 
 defaultMain :: IO ()
 defaultMain = do

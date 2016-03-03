@@ -59,11 +59,11 @@ ws eventFold messageStream connection =
     in _runConceit conceited
 
 
-loopRTM :: WSSEndpoint 
-        -> FoldM IO Event ()
+loopRTM :: FoldM IO Event ()
         -> Stream (Of OutboundMessage) IO ()
+        -> WSSEndpoint 
         -> IO ()
-loopRTM (WSSEndpoint host path) eventHandler messageEmitter = do  
+loopRTM eventHandler messageEmitter (WSSEndpoint host path) = do  
     print (host,path)
     Wuss.runSecureClient (Textual.fromText host) 
                          443
