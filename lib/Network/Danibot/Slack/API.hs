@@ -31,9 +31,12 @@ withToken token =
 
 checkResp :: Value -> Either String Intro
 checkResp v =
-    case (v^?key "ok"._Bool,fromJSON v,v^?key "error"._String) of
-        (Just True ,Success (Wire info),_) -> Right info
-        (Just False,_,Just err) -> Left (Textual.fromText err)
-        (_,Error err,_) -> Left err
+    let parsedOk    = v^?key "ok"._Bool
+        parsedIntro = fromJSON v
+        parsedError = v^?key "error"._String
+    in case (parsedOk,parsedIntro,parsedError) of
+        (Just True ,Success (Wire info),_       ) -> Right info
+        (Just False,_                  ,Just err) -> Left (Textual.fromText err)
+        (_         ,Error err          ,_       ) -> Left err
         _ -> Left "malformed response"
 
