@@ -21,7 +21,8 @@ import GHC.Generics
 import Options.Applicative 
 import qualified Options.Applicative as Options
 
-import Network.Danibot.Slack.Types (introUrl)
+import Network.Danibot.Slack (eventFold)
+import Network.Danibot.Slack.Types (introUrl,introChat)
 import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
 
@@ -56,7 +57,7 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    liftIO (loopRTM (Foldl.mapM_ print) (pure ()) endpoint)
+    liftIO (loopRTM (eventFold (introChat intro)) (pure ()) endpoint)
 
 defaultMain :: IO ()
 defaultMain = do

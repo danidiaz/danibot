@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Danibot.Slack (isDirectedTo) where
+module Network.Danibot.Slack (isDirectedTo,eventFold) where
 
 import Data.Text (Text)
 import Data.Char
 import Data.Profunctor (Star(..))
 import qualified Data.Attoparsec.Text as Atto
 
+import Control.Exception
+import Control.Foldl (FoldM(..))
 import Control.Applicative
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
@@ -19,14 +21,30 @@ import Network.Danibot.Slack.Types (Event,
                                     Event(..),
                                     ChannelUser(..))
 
-handlers :: [Event -> IO ()] -> Event -> IO () 
-handlers = runStar . foldr (*>) (pure ()) . map Star
+eventFold :: Chat -> FoldM IO Event ()
+eventFold chat = FoldM stateTransition (pure InitialState) coda
+    where
+    coda = \_ -> pure ()
 
-imUpdatesHandler :: TVar Chat -> Event -> IO ()  
-imUpdatesHandler tchat event = case event of
-   IMOpen (ChannelUser ch urs) -> undefined
-   IMClose (ChannelUser ch urs) -> undefined
-   _ -> pure ()
+data ChatState = 
+      InitialState
+    | NormalState
+
+stateTransition :: ChatState -> Event -> IO ChatState
+stateTransition s event =
+    case (s,event) of
+        (InitialState,HelloEvent) -> pure NormalState
+        (InitialState,_         ) -> throwIO (userError "wrong start")
+        _                         -> print event *> pure NormalState
+
+--handlers :: [Event -> IO ()] -> Event -> IO () 
+--handlers = runStar . foldr (*>) (pure ()) . map Star
+--
+--imUpdatesHandler :: TVar Chat -> Event -> IO ()  
+--imUpdatesHandler tchat event = case event of
+--   IMOpen (ChannelUser ch urs) -> undefined
+--   IMClose (ChannelUser ch urs) -> undefined
+--   _ -> pure ()
 
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of
