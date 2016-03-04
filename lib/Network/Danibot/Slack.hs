@@ -4,7 +4,7 @@ module Network.Danibot.Slack (isDirectedTo,eventFold) where
 
 import Data.Text (Text)
 import Data.Char
-import Data.Profunctor (Star(..))
+import Data.Monoid
 import qualified Data.Attoparsec.Text as Atto
 
 import Control.Applicative
@@ -39,11 +39,23 @@ reactToEvent (Pair c s) event =
         (InitialState,_) -> 
             throwIO (userError "wrong start")
         (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
+            let whoami = selfId (self c) 
             if has (ims.ix ch) c  
-              then  
-                print "hey, a private message!"  
-              else 
+              then do 
+                case isDirectedTo txt of
+                    Just (target,txt') | target == whoami -> 
+                        print ("message directed to me! " <> txt') 
+                    Nothing ->
+                        print ("message implicitly directed to me!" <> txt)
+                    _ ->
+                        print "message in private channel not directe to me (!?)"
                 print "hey, a message!"  
+              else 
+                case isDirectedTo txt of
+                    Just (target,txt') | target == whoami -> 
+                        print ("message directed to me! " <> txt') 
+                    _ ->
+                        print "ignoring message in public channel"
             pure (Pair c NormalState)
         _ -> 
             print event *> pure (Pair c NormalState)
