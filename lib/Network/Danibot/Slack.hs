@@ -7,9 +7,10 @@ import Data.Char
 import Data.Profunctor (Star(..))
 import qualified Data.Attoparsec.Text as Atto
 
+import Control.Applicative
+import Control.Lens
 import Control.Exception
 import Control.Foldl (FoldM(..))
-import Control.Applicative
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
 
@@ -21,21 +22,32 @@ import Network.Danibot.Slack.Types (Event,
                                     Event(..),
                                     ChannelUser(..))
 
+data Pair a b = Pair !a !b
+
 eventFold :: Chat -> FoldM IO Event ()
-eventFold chat = FoldM stateTransition (pure InitialState) coda
+eventFold chat = FoldM reactToEvent (pure (Pair chat InitialState)) coda
     where
     coda = \_ -> pure ()
 
-data ChatState = 
+data ProtocolState = 
       InitialState
     | NormalState
 
-stateTransition :: ChatState -> Event -> IO ChatState
-stateTransition s event =
+type ChatState = Pair Chat ProtocolState
+
+reactToEvent :: ChatState -> Event -> IO ChatState
+reactToEvent (Pair c s) event =
     case (s,event) of
-        (InitialState,HelloEvent) -> pure NormalState
-        (InitialState,_         ) -> throwIO (userError "wrong start")
-        _                         -> print event *> pure NormalState
+        (InitialState,HelloEvent) -> 
+            pure (Pair c NormalState)
+        (InitialState,_) -> 
+            throwIO (userError "wrong start")
+        (NormalState,IMOpen (ChannelUser ch usr)) ->
+            undefined 
+        (NormalState,IMClose (ChannelUser ch usr)) ->
+            undefined 
+        _ -> 
+            print event *> pure (Pair c NormalState)
 
 --handlers :: [Event -> IO ()] -> Event -> IO () 
 --handlers = runStar . foldr (*>) (pure ()) . map Star

@@ -15,6 +15,7 @@ import qualified Data.Monoid.Cancellative as Textual
 import Data.Aeson
 import Data.Aeson.Types
 import Control.Applicative
+import Control.Lens (Lens',lens)
 
 import GHC.Generics
 
@@ -63,9 +64,11 @@ data Chat = Chat
     ,   users :: !(Map Text User)
     ,   channels :: !(Map Text Channel)
     ,   groups :: !(Map Text Group)
-    ,   ims :: !(Map Text IM)
+    ,   _ims :: !(Map Text IM)
     } deriving (Generic,Show,ToJSON)
 
+ims :: Lens' Chat (Map Text IM)
+ims = lens _ims (\s b -> s { _ims = b })
 
 --data ChatWrap = ChatWrap
 --    {
