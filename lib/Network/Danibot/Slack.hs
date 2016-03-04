@@ -16,11 +16,7 @@ import Control.Concurrent.STM.TVar
 
 import Streaming (Stream)
 
-import Network.Danibot.Slack.Types (Event,
-                                    UserMessage(..),
-                                    Chat(..),
-                                    Event(..),
-                                    ChannelUser(..))
+import Network.Danibot.Slack.Types 
 
 data Pair a b = Pair !a !b
 
@@ -42,21 +38,15 @@ reactToEvent (Pair c s) event =
             pure (Pair c NormalState)
         (InitialState,_) -> 
             throwIO (userError "wrong start")
-        (NormalState,IMOpen (ChannelUser ch usr)) ->
-            undefined 
-        (NormalState,IMClose (ChannelUser ch usr)) ->
-            undefined 
+        (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
+            if has (ims.ix ch) c  
+              then  
+                print "hey, a private message!"  
+              else 
+                print "hey, a message!"  
+            pure (Pair c NormalState)
         _ -> 
             print event *> pure (Pair c NormalState)
-
---handlers :: [Event -> IO ()] -> Event -> IO () 
---handlers = runStar . foldr (*>) (pure ()) . map Star
---
---imUpdatesHandler :: TVar Chat -> Event -> IO ()  
---imUpdatesHandler tchat event = case event of
---   IMOpen (ChannelUser ch urs) -> undefined
---   IMClose (ChannelUser ch urs) -> undefined
---   _ -> pure ()
 
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of

@@ -239,8 +239,6 @@ data Event =
       HelloEvent
     | MessageEvent Message
     | UserTypingEvent ChannelUser
-    | IMOpen ChannelUser
-    | IMClose ChannelUser
     | GeneralEvent Value 
     deriving (Generic,Show,ToJSON)
 
@@ -254,10 +252,6 @@ instance FromJSON (Wire Event) where
                 MessageEvent . unwire <$> parseJSON (Object v)
             "user_typing" -> 
                 UserTypingEvent . unwire <$> parseJSON (Object v)
-            "im_open" -> 
-                IMOpen . unwire <$> parseJSON (Object v)
-            "im_close" -> 
-                IMClose . unwire <$> parseJSON (Object v)
             _ -> pure (GeneralEvent (Object v)))   
     parseJSON _ = empty
 
