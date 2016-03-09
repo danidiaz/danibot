@@ -10,9 +10,15 @@ import qualified Data.Attoparsec.Text as Atto
 import Control.Applicative
 import Control.Lens
 import Control.Exception
+import Control.Monad
+import Control.Monad.IO.Class
+import Streaming (Stream)
+import Streaming.Prelude (Of,unfoldr)
+import qualified Streaming.Prelude as Streaming
 import Control.Foldl (FoldM(..))
 import Control.Concurrent.MVar
-import Control.Concurrent.STM.TVar
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TChan
 
 import Streaming (Stream)
 
@@ -20,8 +26,14 @@ import Network.Danibot.Slack.Types
 
 data Pair a b = Pair !a !b
 
-eventFold :: Chat -> FoldM IO Event ()
-eventFold chat = FoldM reactToEvent (pure (Pair chat InitialState)) coda
+eventFold :: Chat -> IO (FoldM IO Event (),Stream (Of OutboundMessage) IO ())
+eventFold chat = do
+    chan <- atomically newTChan  
+    let pair = 
+         (,)
+         (FoldM reactToEvent (pure (Pair chat InitialState)) coda)    
+         (Streaming.repeatM (atomically (readTChan chan)))
+    pure pair
     where
     coda = \_ -> pure ()
 
@@ -31,6 +43,7 @@ data ProtocolState =
 
 type ChatState = Pair Chat ProtocolState
 
+--reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> Event -> IO ChatState
 reactToEvent :: ChatState -> Event -> IO ChatState
 reactToEvent (Pair c s) event =
     case (s,event) of
@@ -54,7 +67,7 @@ reactToEvent (Pair c s) event =
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> 
                         print ("message directed to me! " <> txt') 
-                    _ ->
+                    _ -> do      
                         print "ignoring message in public channel"
             pure (Pair c NormalState)
         _ -> 

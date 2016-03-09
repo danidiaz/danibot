@@ -57,7 +57,8 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    liftIO (loopRTM (eventFold (introChat intro)) (pure ()) endpoint)
+    (folder,source) <- liftIO (eventFold (introChat intro))
+    liftIO (loopRTM folder source endpoint)
 
 defaultMain :: IO ()
 defaultMain = do
