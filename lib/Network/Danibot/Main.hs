@@ -16,12 +16,14 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
 import qualified Control.Foldl as Foldl
 
+import Control.Concurrent.Conceit
+
 import GHC.Generics
 
 import Options.Applicative 
 import qualified Options.Applicative as Options
 
-import Network.Danibot.Slack (eventFold)
+import Network.Danibot.Slack 
 import Network.Danibot.Slack.Types (introUrl,introChat)
 import Network.Danibot.Slack.API (startRTM)
 import Network.Danibot.Slack.RTM (fromWSSURI,loopRTM)
@@ -57,8 +59,11 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    (folder,source) <- liftIO (eventFold (introChat intro))
-    liftIO (loopRTM folder source endpoint)
+    (workChan,worker) <- liftIO discardWorker
+    (outboundChan,source) <- liftIO spawnEmitter 
+    let theEventFold = eventFold workChan outboundChan (introChat intro) 
+    liftIO (_runConceit (_Conceit (loopRTM theEventFold source endpoint) 
+                         *> _Conceit worker))
 
 defaultMain :: IO ()
 defaultMain = do

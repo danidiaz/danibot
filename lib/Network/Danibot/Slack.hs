@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Danibot.Slack (isDirectedTo,eventFold) where
+module Network.Danibot.Slack (isDirectedTo,discardWorker,spawnEmitter,eventFold) where
 
 import Data.Text (Text)
 import Data.Char
@@ -26,14 +26,25 @@ import Network.Danibot.Slack.Types
 
 data Pair a b = Pair !a !b
 
-eventFold :: Chat -> IO (FoldM IO Event (),Stream (Of OutboundMessage) IO ())
-eventFold chat = do
+discardWorker :: IO (TChan (Text,Text -> IO ()), IO ()) 
+discardWorker = do
     chan <- atomically newTChan  
-    let pair = 
-         (,)
-         (FoldM reactToEvent (pure (Pair chat InitialState)) coda)    
-         (Streaming.repeatM (atomically (readTChan chan)))
-    pure pair
+    let worker = forever (do
+                            _ <- atomically (readTChan chan)
+                            pure ())
+    pure (chan,worker)                            
+
+spawnEmitter :: IO (TChan OutboundMessage,Stream (Of OutboundMessage) IO ())
+spawnEmitter = do
+    chan <- atomically newTChan  
+    pure (chan,Streaming.repeatM (atomically (readTChan chan)))
+
+eventFold :: TChan (Text,Text -> IO ()) 
+          -> TChan OutboundMessage
+          -> Chat 
+          -> FoldM IO Event ()
+eventFold pool outboundchan chat =
+    FoldM (reactToEvent pool) (pure (Pair chat InitialState)) coda    
     where
     coda = \_ -> pure ()
 
@@ -44,8 +55,8 @@ data ProtocolState =
 type ChatState = Pair Chat ProtocolState
 
 --reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> Event -> IO ChatState
-reactToEvent :: ChatState -> Event -> IO ChatState
-reactToEvent (Pair c s) event =
+reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> Event -> IO ChatState
+reactToEvent pool (Pair c s) event =
     case (s,event) of
         (InitialState,HelloEvent) -> 
             pure (Pair c NormalState)
