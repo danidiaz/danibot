@@ -58,7 +58,7 @@ ws eventFold messageStream connection =
                     Streaming.yield event)
         sendMessage x = do
             print (encode (Wire x))
-            (Webs.sendBinaryData connection . encode . Wire) x
+            (Webs.sendTextData connection . encode . Wire) x
     in _runConceit conceited
 
 

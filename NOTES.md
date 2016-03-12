@@ -57,3 +57,6 @@ NOTES
 
 - Remember to parse message confirmations.
 
+- Message confirmations don't have a "type" field.
+
+- websocket data must be passed as Text, a weird error happened when passed as ByteString.

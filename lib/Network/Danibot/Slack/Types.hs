@@ -244,16 +244,16 @@ data Event =
 
 instance FromJSON (Wire Event) where
     parseJSON (Object v) = Wire <$> (do
-        eventType <- v .: "type"
-        case eventType :: Text of
-            "hello" -> 
+        eventType <- v .:? "type"
+        case eventType :: Maybe Text of
+            Just "hello" -> 
                 pure HelloEvent 
-            "message" -> 
+            Just "message" -> 
                 MessageEvent . unwire <$> parseJSON (Object v)
-            "user_typing" -> 
+            Just "user_typing" -> 
                 UserTypingEvent . unwire <$> parseJSON (Object v)
             _ -> pure (GeneralEvent (Object v)))   
-    parseJSON _ = empty
+    parseJSON v = empty
 
 data OutboundMessage = OutboundMessage
     {
