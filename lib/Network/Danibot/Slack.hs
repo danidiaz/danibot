@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Network.Danibot.Slack (isDirectedTo,discardWorker,spawnEmitter,eventFold) where
+module Network.Danibot.Slack (isDirectedTo,discardWorker,makeChatState,eventFold) where
 
 import Data.Text (Text)
 import Data.Char
@@ -16,15 +16,14 @@ import Streaming (Stream)
 import Streaming.Prelude (Of,unfoldr)
 import qualified Streaming.Prelude as Streaming
 import Control.Foldl (FoldM(..))
-import Control.Concurrent.MVar
 import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar
 import Control.Concurrent.STM.TChan
 
 import Streaming (Stream)
 
 import Network.Danibot.Slack.Types 
 
-data Pair a b = Pair !a !b
 
 discardWorker :: IO (TChan (Text,Text -> IO ()), IO ()) 
 discardWorker = do
@@ -34,28 +33,38 @@ discardWorker = do
                             pure ())
     pure (chan,worker)                            
 
-spawnEmitter :: IO (TChan OutboundMessage,Stream (Of OutboundMessage) IO ())
-spawnEmitter = do
-    chan <- atomically newTChan  
-    pure (chan,Streaming.repeatM (atomically (readTChan chan)))
-
 eventFold :: TChan (Text,Text -> IO ()) 
-          -> TChan OutboundMessage
-          -> Chat 
+          -> ChatState
           -> FoldM IO Event ()
-eventFold pool outboundchan chat =
-    FoldM (reactToEvent pool) (pure (Pair chat InitialState)) coda    
+eventFold pool chatState =
+    FoldM (reactToEvent pool) (pure (Pair chatState InitialState)) coda    
     where
     coda = \_ -> pure ()
+
+data ChatState = ChatState
+    {
+       chatVar :: TVar Chat 
+    ,  nextMsgIdVar :: TVar Int 
+    ,  outboundChan :: TChan OutboundMessage 
+    } 
+
+makeChatState :: Chat -> IO (ChatState, Stream (Of OutboundMessage) IO ())
+makeChatState c = do
+    chatVar' <- atomically (newTVar c)
+    nextMsgIdVar' <- atomically (newTVar 0)
+    outboundChan' <- atomically newTChan  
+    pure (ChatState chatVar' nextMsgIdVar' outboundChan'
+         ,Streaming.repeatM (atomically (readTChan outboundChan')))
 
 data ProtocolState = 
       InitialState
     | NormalState
 
-type ChatState = Pair Chat ProtocolState
+data Pair a b = Pair !a !b
 
---reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> Event -> IO ChatState
-reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> Event -> IO ChatState
+type FoldState = Pair ChatState ProtocolState
+
+reactToEvent :: TChan (Text,Text -> IO ()) -> FoldState -> Event -> IO FoldState
 reactToEvent pool (Pair c s) event =
     case (s,event) of
         (InitialState,HelloEvent) -> 
@@ -63,8 +72,9 @@ reactToEvent pool (Pair c s) event =
         (InitialState,_) -> 
             throwIO (userError "wrong start")
         (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
-            let whoami = selfId (self c) 
-            if has (ims.ix ch) c  
+            currentcs <- atomically (readTVar (chatVar c)) 
+            let whoami = selfId (self currentcs) 
+            if has (ims.ix ch) currentcs  
               then do 
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> 
