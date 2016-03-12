@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NumDecimals #-}
 
-module Network.Danibot.Slack (isDirectedTo,discardWorker,makeChatState,eventFold) where
+module Network.Danibot.Slack (isDirectedTo,worker,dumbHandler,makeChatState,eventFold) where
 
 import Data.Text (Text)
 import Data.Char
@@ -16,6 +17,7 @@ import Streaming (Stream)
 import Streaming.Prelude (Of,unfoldr)
 import qualified Streaming.Prelude as Streaming
 import Control.Foldl (FoldM(..))
+import Control.Concurrent
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TVar
 import Control.Concurrent.STM.TChan
@@ -24,27 +26,34 @@ import Streaming (Stream)
 
 import Network.Danibot.Slack.Types 
 
+dumbHandler :: Text -> IO Text
+dumbHandler _ = do 
+    threadDelay 1e6
+    print "oops"
+    return "I don't do anything yet."
 
-discardWorker :: IO (TChan (Text,Text -> IO ()), IO ()) 
-discardWorker = do
+worker :: (Text -> IO Text) -> IO (TChan (Text,Text -> IO ()), IO ()) 
+worker handler = do
     chan <- atomically newTChan  
     let worker = forever (do
-                            _ <- atomically (readTChan chan)
-                            pure ())
+                            (task,post) <- atomically (readTChan chan)
+                            forkIO (do
+                                result <- handler task
+                                post result))
     pure (chan,worker)                            
 
 eventFold :: TChan (Text,Text -> IO ()) 
           -> ChatState
           -> FoldM IO Event ()
 eventFold pool chatState =
-    FoldM (reactToEvent pool) (pure (Pair chatState InitialState)) coda    
+    FoldM (reactToEvent pool chatState) (pure InitialState) coda    
     where
     coda = \_ -> pure ()
 
 data ChatState = ChatState
     {
        chatVar :: TVar Chat 
-    ,  nextMsgIdVar :: TVar Int 
+    ,  nextMsgIdVar :: TVar Integer 
     ,  outboundChan :: TChan OutboundMessage 
     } 
 
@@ -60,39 +69,38 @@ data ProtocolState =
       InitialState
     | NormalState
 
-data Pair a b = Pair !a !b
-
-type FoldState = Pair ChatState ProtocolState
-
-reactToEvent :: TChan (Text,Text -> IO ()) -> FoldState -> Event -> IO FoldState
-reactToEvent pool (Pair c s) event =
-    case (s,event) of
+reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> ProtocolState -> Event -> IO ProtocolState
+reactToEvent pool cs protocolState event =
+    case (protocolState,event) of
         (InitialState,HelloEvent) -> 
-            pure (Pair c NormalState)
+            pure NormalState
         (InitialState,_) -> 
             throwIO (userError "wrong start")
         (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
-            currentcs <- atomically (readTVar (chatVar c)) 
+            currentcs <- atomically (readTVar (chatVar cs)) 
             let whoami = selfId (self currentcs) 
             if has (ims.ix ch) currentcs  
               then do 
                 case isDirectedTo txt of
-                    Just (target,txt') | target == whoami -> 
+                    Just (target,txt') | target == whoami -> do
+                        atomically (writeTChan pool (txt',sendMessage cs ch))
                         print ("message directed to me! " <> txt') 
-                    Nothing ->
+                    Nothing -> do
+                        atomically (writeTChan pool (txt,sendMessage cs ch))
                         print ("message implicitly directed to me!" <> txt)
                     _ ->
                         print "message in private channel not directe to me (!?)"
                 print "hey, a message!"  
               else 
                 case isDirectedTo txt of
-                    Just (target,txt') | target == whoami -> 
+                    Just (target,txt') | target == whoami -> do
+                        atomically (writeTChan pool (txt',sendMessage cs ch . addressTo user))
                         print ("message directed to me! " <> txt') 
                     _ -> do      
                         print "ignoring message in public channel"
-            pure (Pair c NormalState)
+            pure NormalState
         _ -> 
-            print event *> pure (Pair c NormalState)
+            print event *> pure NormalState
 
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of
@@ -108,3 +116,14 @@ isDirectedTo txt = case Atto.parse mentionParser txt of
         <* 
         Atto.skipSpace
 
+addressTo :: Text -> Text -> Text
+addressTo uid msg = mconcat ["<@",uid,">: ",msg]
+
+sendMessage :: ChatState -> Text -> Text -> IO () 
+sendMessage cstate channelId msg = do
+    atomically (do
+         i <- readTVar (nextMsgIdVar cstate)
+         modifyTVar' (nextMsgIdVar cstate) succ 
+         writeTChan (outboundChan cstate) 
+                    (OutboundMessage i channelId msg)) 
+       

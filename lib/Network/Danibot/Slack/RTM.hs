@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Network.Danibot.Slack.RTM (
           fromWSSURI
@@ -55,7 +56,9 @@ ws eventFold messageStream connection =
                     liftIO (throwIO (userError ("Malformed msg: " ++ errmsg)))
                 Right (Wire event) -> 
                     Streaming.yield event)
-        sendMessage = Webs.sendBinaryData connection . encode . Wire
+        sendMessage x = do
+            print (encode (Wire x))
+            (Webs.sendBinaryData connection . encode . Wire) x
     in _runConceit conceited
 
 

@@ -59,11 +59,11 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    (workChan,worker) <- liftIO discardWorker
+    (workChan,workerAction) <- liftIO (worker dumbHandler)
     (chatState,source) <- liftIO (makeChatState (introChat intro))
     let theEventFold = eventFold workChan chatState
     liftIO (_runConceit (_Conceit (loopRTM theEventFold source endpoint) 
-                         *> _Conceit worker))
+                         *> _Conceit workerAction))
 
 defaultMain :: IO ()
 defaultMain = do
