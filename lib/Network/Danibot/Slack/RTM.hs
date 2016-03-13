@@ -13,12 +13,10 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString 
 import Data.Aeson (eitherDecode',encode)
 import Control.Monad
-import Control.Monad.Trans.Except
 import Control.Monad.IO.Class
 import Control.Exception
 import Control.Concurrent.Conceit
-import Control.Foldl (FoldM)
-import qualified Control.Foldl as Foldl
+import Control.Foldl (impurely,FoldM)
 import Streaming (Stream)
 import Streaming.Prelude (Of)
 import qualified Streaming as Streaming
@@ -46,7 +44,7 @@ ws :: FoldM IO Event ()
    -> Webs.ClientApp ()
 ws eventFold messageStream connection = 
     let conceited =
-            (_Conceit (Foldl.impurely Streaming.foldM_ eventFold eventStream))
+            (_Conceit (impurely Streaming.foldM_ eventFold eventStream))
             *> 
             (_Conceit (Streaming.mapM_ sendMessage messageStream))
         eventStream = forever (do

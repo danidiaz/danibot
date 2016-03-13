@@ -14,7 +14,7 @@ import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Streaming (Stream)
-import Streaming.Prelude (Of,unfoldr)
+import Streaming.Prelude (Of)
 import qualified Streaming.Prelude as Streaming
 import Control.Foldl (FoldM(..))
 import Control.Concurrent
@@ -29,7 +29,6 @@ import Network.Danibot.Slack.Types
 dumbHandler :: Text -> IO Text
 dumbHandler _ = do 
     threadDelay 1e6
-    print "oops"
     return "I don't do anything yet."
 
 worker :: (Text -> IO Text) -> IO (TChan (Text,Text -> IO ()), IO ()) 
@@ -69,7 +68,11 @@ data ProtocolState =
       InitialState
     | NormalState
 
-reactToEvent :: TChan (Text,Text -> IO ()) -> ChatState -> ProtocolState -> Event -> IO ProtocolState
+reactToEvent :: TChan (Text,Text -> IO ()) 
+             -> ChatState 
+             -> ProtocolState 
+             -> Event 
+             -> IO ProtocolState
 reactToEvent pool cs protocolState event =
     case (protocolState,event) of
         (InitialState,HelloEvent) -> 
@@ -79,28 +82,25 @@ reactToEvent pool cs protocolState event =
         (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
             currentcs <- atomically (readTVar (chatVar cs)) 
             let whoami = selfId (self currentcs) 
+                send = sendMessage cs ch
             if has (ims.ix ch) currentcs  
               then do 
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> do
-                        atomically (writeTChan pool (txt',sendMessage cs ch))
-                        print ("message directed to me! " <> txt') 
+                        atomically (writeTChan pool 
+                                               (txt',send))
                     Nothing -> do
-                        atomically (writeTChan pool (txt,sendMessage cs ch))
-                        print ("message implicitly directed to me!" <> txt)
-                    _ ->
-                        print "message in private channel not directe to me (!?)"
-                print "hey, a message!"  
+                        atomically (writeTChan pool 
+                                               (txt ,send))
+                    _ -> pure ()
               else 
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> do
-                        atomically (writeTChan pool (txt',sendMessage cs ch . addressTo user))
-                        print ("message directed to me! " <> txt') 
-                    _ -> do      
-                        print "ignoring message in public channel"
+                        atomically (writeTChan pool 
+                                               (txt',send . addressTo user))
+                    _ -> pure ()
             pure NormalState
-        _ -> 
-            print event *> pure NormalState
+        _ -> print event *> pure NormalState
 
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of

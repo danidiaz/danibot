@@ -11,7 +11,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Data.Text as Text
-import qualified Data.Monoid.Cancellative as Textual
 import Data.Aeson
 import Data.Aeson.Types
 import Control.Applicative
@@ -69,13 +68,6 @@ data Chat = Chat
 
 ims :: Lens' Chat (Map Text IM)
 ims = lens _ims (\s b -> s { _ims = b })
-
---data ChatWrap = ChatWrap
---    {
---        chat  :: !Chat
---    ,   nextMessageId :: !Integer
---    } deriving (Generic,Show,ToJSON)
-
 
 data Self = Self
     {
@@ -253,7 +245,7 @@ instance FromJSON (Wire Event) where
             Just "user_typing" -> 
                 UserTypingEvent . unwire <$> parseJSON (Object v)
             _ -> pure (GeneralEvent (Object v)))   
-    parseJSON v = empty
+    parseJSON _ = empty
 
 data OutboundMessage = OutboundMessage
     {
