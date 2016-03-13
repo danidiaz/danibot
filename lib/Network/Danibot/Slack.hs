@@ -1,7 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NumDecimals #-}
 
-module Network.Danibot.Slack (isDirectedTo,worker,dumbHandler,makeChatState,eventFold) where
+module Network.Danibot.Slack (
+      worker
+    , dumbHandler
+    , makeChatState
+    , eventFold
+    ) where
 
 import Data.Text (Text)
 import Data.Char
@@ -45,9 +50,7 @@ eventFold :: TChan (Text,Text -> IO ())
           -> ChatState
           -> FoldM IO Event ()
 eventFold pool chatState =
-    FoldM (reactToEvent pool chatState) (pure InitialState) coda    
-    where
-    coda = \_ -> pure ()
+    FoldM (reactToEvent pool chatState) (pure InitialState) (\_ -> pure ())
 
 data ChatState = ChatState
     {
@@ -82,9 +85,9 @@ reactToEvent pool cs protocolState event =
         (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
             currentcs <- atomically (readTVar (chatVar cs)) 
             let whoami = selfId (self currentcs) 
-                send = sendMessage cs ch
+                send = sendMessageToChannel cs ch
             if has (ims.ix ch) currentcs  
-              then do 
+              then 
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> do
                         atomically (writeTChan pool 
@@ -100,7 +103,8 @@ reactToEvent pool cs protocolState event =
                                                (txt',send . addressTo user))
                     _ -> pure ()
             pure NormalState
-        _ -> print event *> pure NormalState
+        _ -> do
+            pure NormalState
 
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of
@@ -119,8 +123,8 @@ isDirectedTo txt = case Atto.parse mentionParser txt of
 addressTo :: Text -> Text -> Text
 addressTo uid msg = mconcat ["<@",uid,">: ",msg]
 
-sendMessage :: ChatState -> Text -> Text -> IO () 
-sendMessage cstate channelId msg = do
+sendMessageToChannel :: ChatState -> Text -> Text -> IO () 
+sendMessageToChannel cstate channelId msg = do
     atomically (do
          i <- readTVar (nextMsgIdVar cstate)
          modifyTVar' (nextMsgIdVar cstate) succ 

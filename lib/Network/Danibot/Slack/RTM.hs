@@ -11,6 +11,7 @@ import qualified Data.Monoid.Textual as Textual
 import Data.Text (Text)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString 
+import qualified Data.ByteString.Lazy.Char8 as Bytes.Lazy.Char8
 import Data.Aeson (eitherDecode',encode)
 import Control.Monad
 import Control.Monad.IO.Class
@@ -52,11 +53,11 @@ ws eventFold messageStream connection =
             case eitherDecode' message of
                 Left errmsg -> 
                     liftIO (throwIO (userError ("Malformed msg: " ++ errmsg)))
-                Right (Wire event) -> 
+                Right (Wire event) -> do
+                    liftIO (Bytes.Lazy.Char8.putStrLn (encode event))
                     Streaming.yield event)
-        sendMessage x = do
-            print (encode (Wire x))
-            (Webs.sendTextData connection . encode . Wire) x
+        sendMessage = 
+            Webs.sendTextData connection . encode . Wire
     in _runConceit conceited
 
 
@@ -65,7 +66,6 @@ loopRTM :: FoldM IO Event ()
         -> WSSEndpoint 
         -> IO ()
 loopRTM eventHandler messageEmitter (WSSEndpoint host path) = do  
-    print (host,path)
     Wuss.runSecureClient (Textual.fromText host) 
                          443
                          (Textual.fromText path) 
