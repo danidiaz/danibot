@@ -8,14 +8,11 @@ module Network.Danibot.Slack (
 
 import Data.Text (Text)
 import Data.Char
-import Data.Monoid
 import qualified Data.Attoparsec.Text as Atto
 
-import Control.Applicative
 import Control.Lens
 import Control.Exception
 import Control.Monad
-import Control.Monad.IO.Class
 import Streaming (Stream)
 import Streaming.Prelude (Of)
 import qualified Streaming.Prelude as Streaming
@@ -25,25 +22,52 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TVar
 import Control.Concurrent.STM.TChan
 
-import Streaming (Stream)
-
 import Network.Danibot.Slack.Types 
 
 worker :: (Text -> IO Text) -> IO (TChan (Text,Text -> IO ()), IO ()) 
 worker handler = do
     chan <- atomically newTChan  
-    let worker = forever (do
-                            (task,post) <- atomically (readTChan chan)
-                            forkIO (do
-                                result <- handler task
-                                post result))
-    pure (chan,worker)                            
+    let go = forever (do (task,post) <- atomically (readTChan chan)
+                         forkIO (do
+                             result <- handler task
+                             post result))
+    pure (chan,go)                            
 
 eventFold :: TChan (Text,Text -> IO ()) 
           -> ChatState
           -> FoldM IO Event ()
-eventFold pool chatState =
-    FoldM (reactToEvent pool chatState) (pure InitialState) (\_ -> pure ())
+eventFold pool cs =
+    FoldM reactToEvent (pure InitialState) (\_ -> pure ())
+    where
+    reactToEvent protocolState event =
+        case (protocolState,event) of
+            (InitialState,HelloEvent) -> 
+                pure NormalState
+            (InitialState,_) -> 
+                throwIO (userError "wrong start")
+            (NormalState,MessageEvent (Message _ (Right (UserMessage channel_ user_ text_ NotMe)))) -> do
+                currentcs <- atomically (readTVar (chatVar cs)) 
+                let whoami = identity (self currentcs) 
+                    send = sendMessageToChannel cs channel_
+                if has (ims.ix channel_) currentcs 
+                  then -- IM message?
+                    case isDirectedTo text_ of
+                        Just (target,text') | target == whoami -> do
+                            atomically (writeTChan pool 
+                                                   (text',send))
+                        Nothing -> do
+                            atomically (writeTChan pool 
+                                                   (text_,send))
+                        _ -> pure ()
+                  else -- message in general channel? 
+                    case isDirectedTo text_ of
+                        Just (target,text') | target == whoami -> do
+                            atomically (writeTChan pool 
+                                                   (text',send . addressTo user_))
+                        _ -> pure ()
+                pure NormalState
+            _ -> do
+                pure NormalState
 
 data ChatState = ChatState
     {
@@ -64,44 +88,9 @@ data ProtocolState =
       InitialState
     | NormalState
 
-reactToEvent :: TChan (Text,Text -> IO ()) 
-             -> ChatState 
-             -> ProtocolState 
-             -> Event 
-             -> IO ProtocolState
-reactToEvent pool cs protocolState event =
-    case (protocolState,event) of
-        (InitialState,HelloEvent) -> 
-            pure NormalState
-        (InitialState,_) -> 
-            throwIO (userError "wrong start")
-        (NormalState,MessageEvent (Message _ (Right (UserMessage channel_ user_ txt NotMe)))) -> do
-            currentcs <- atomically (readTVar (chatVar cs)) 
-            let whoami = selfId (self currentcs) 
-                send = sendMessageToChannel cs channel_
-            if has (ims.ix channel_) currentcs  
-              then 
-                case isDirectedTo txt of
-                    Just (target,txt') | target == whoami -> do
-                        atomically (writeTChan pool 
-                                               (txt',send))
-                    Nothing -> do
-                        atomically (writeTChan pool 
-                                               (txt ,send))
-                    _ -> pure ()
-              else 
-                case isDirectedTo txt of
-                    Just (target,txt') | target == whoami -> do
-                        atomically (writeTChan pool 
-                                               (txt',send . addressTo user_))
-                    _ -> pure ()
-            pure NormalState
-        _ -> do
-            pure NormalState
-
 isDirectedTo :: Text -> Maybe (Text,Text)
 isDirectedTo txt = case Atto.parse mentionParser txt of
-        Atto.Done rest userId -> Just (userId,rest)
+        Atto.Done rest userId_ -> Just (userId_,rest)
         _                     -> Nothing
     where
     mentionParser = 
@@ -117,10 +106,10 @@ addressTo :: Text -> Text -> Text
 addressTo uid msg = mconcat ["<@",uid,">: ",msg]
 
 sendMessageToChannel :: ChatState -> Text -> Text -> IO () 
-sendMessageToChannel cstate channelId msg = do
+sendMessageToChannel cstate channelId_ msg = do
     atomically (do
          i <- readTVar (nextMsgIdVar cstate)
          modifyTVar' (nextMsgIdVar cstate) succ 
          writeTChan (outboundChan cstate) 
-                    (OutboundMessage i channelId msg)) 
+                    (OutboundMessage i channelId_ msg)) 
        
