@@ -52,6 +52,7 @@ library
         , foldl                 >= 1.1.5
         , streaming             >= 0.1.4
     exposed-modules:
+        Network.Danibot
         Network.Danibot.Main
         Network.Danibot.Slack
         Network.Danibot.Slack.Types

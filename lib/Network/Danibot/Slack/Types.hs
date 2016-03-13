@@ -18,7 +18,7 @@ import Control.Lens (Lens',lens)
 
 import GHC.Generics
 
-newtype Wire a = Wire { unwire :: a } deriving (Show,Functor)
+newtype Wire a = Wire { unWire :: a } deriving (Show,Functor)
 
 instance Identified i => Identified (Wire i) where
     identity (Wire i) = identity i
@@ -39,21 +39,19 @@ instance ToJSON Intro
 
 instance FromJSON (Wire Intro) where
     parseJSON (Object v) = 
-        let
-        introParser = Intro
-            <$> v .: "url"
-            <*> chatParser 
-        chatParser = Chat
-            <$> (unwire <$> v .: "self")
-            <*> (unwire <$> v .: "team")
-            <*> (mapify <$> v .: "users")
-            <*> (mapify <$> v .: "channels")
-            <*> (mapify <$> v .: "groups")
-            <*> (mapify <$> v .: "ims")
-        mapify es = 
-            Map.fromList (zip (map identity es) (map unwire es))
-        in
-        Wire <$> introParser
+        let introParser = Intro
+                <$> v .: "url"
+                <*> chatParser 
+            chatParser = Chat
+                <$> (unWire <$> v .: "self")
+                <*> (unWire <$> v .: "team")
+                <*> (mapify <$> v .: "users")
+                <*> (mapify <$> v .: "channels")
+                <*> (mapify <$> v .: "groups")
+                <*> (mapify <$> v .: "ims")
+            mapify es = 
+                Map.fromList (zip (map identity es) (map unWire es))
+        in  Wire <$> introParser
     parseJSON _ = empty
 
 data Chat = Chat
@@ -241,9 +239,9 @@ instance FromJSON (Wire Event) where
             Just "hello" -> 
                 pure HelloEvent 
             Just "message" -> 
-                MessageEvent . unwire <$> parseJSON (Object v)
+                MessageEvent . unWire <$> parseJSON (Object v)
             Just "user_typing" -> 
-                UserTypingEvent . unwire <$> parseJSON (Object v)
+                UserTypingEvent . unWire <$> parseJSON (Object v)
             _ -> pure (GeneralEvent (Object v)))   
     parseJSON _ = empty
 

@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NumDecimals #-}
 
 module Network.Danibot.Slack (
       worker
-    , dumbHandler
     , makeChatState
     , eventFold
     ) where
@@ -30,11 +28,6 @@ import Control.Concurrent.STM.TChan
 import Streaming (Stream)
 
 import Network.Danibot.Slack.Types 
-
-dumbHandler :: Text -> IO Text
-dumbHandler _ = do 
-    threadDelay 1e6
-    return "I don't do anything yet."
 
 worker :: (Text -> IO Text) -> IO (TChan (Text,Text -> IO ()), IO ()) 
 worker handler = do
@@ -82,11 +75,11 @@ reactToEvent pool cs protocolState event =
             pure NormalState
         (InitialState,_) -> 
             throwIO (userError "wrong start")
-        (NormalState,MessageEvent (Message _ (Right (UserMessage ch user txt NotMe)))) -> do
+        (NormalState,MessageEvent (Message _ (Right (UserMessage channel_ user_ txt NotMe)))) -> do
             currentcs <- atomically (readTVar (chatVar cs)) 
             let whoami = selfId (self currentcs) 
-                send = sendMessageToChannel cs ch
-            if has (ims.ix ch) currentcs  
+                send = sendMessageToChannel cs channel_
+            if has (ims.ix channel_) currentcs  
               then 
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> do
@@ -100,7 +93,7 @@ reactToEvent pool cs protocolState event =
                 case isDirectedTo txt of
                     Just (target,txt') | target == whoami -> do
                         atomically (writeTChan pool 
-                                               (txt',send . addressTo user))
+                                               (txt',send . addressTo user_))
                     _ -> pure ()
             pure NormalState
         _ -> do

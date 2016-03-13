@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Network.Danibot.Main (
-        defaultMain
+        mainWith
     ) where
 
 import Data.Function ((&))
@@ -49,8 +49,8 @@ parserInfo =
     infoMod = 
         fullDesc <> header "program desc" 
 
-exceptionalMain :: ExceptT String IO ()
-exceptionalMain = do
+exceptionalMain :: (Text -> IO Text) -> ExceptT String IO ()
+exceptionalMain handler = do
     args <- liftIO (Options.execParser parserInfo)
     conf <- ExceptT (do
         bytes <- Bytes.readFile (confPath args)
@@ -59,15 +59,15 @@ exceptionalMain = do
     liftIO (print intro)
     endpoint <- fromWSSURI (introUrl intro)
               & either throwE pure
-    (workChan,workerAction) <- liftIO (worker dumbHandler)
+    (workChan,workerAction) <- liftIO (worker handler)
     (chatState,source) <- liftIO (makeChatState (introChat intro))
     let theEventFold = eventFold workChan chatState
     liftIO (_runConceit (_Conceit (loopRTM theEventFold source endpoint) 
                          *> _Conceit workerAction))
 
-defaultMain :: IO ()
-defaultMain = do
-    final <- runExceptT exceptionalMain 
+mainWith :: (Text -> IO Text) -> IO ()
+mainWith handler = do
+    final <- runExceptT (exceptionalMain handler)
     case final of
         Left err -> print err
         Right () -> pure ()

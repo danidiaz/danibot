@@ -2,9 +2,10 @@ module Main (
         main
     ) where
 
-import Network.Danibot.Main
+import Network.Danibot (dumbHandler)
+import Network.Danibot.Main (mainWith)
 
 main :: IO ()
-main = defaultMain 
+main = mainWith dumbHandler 
 
 
