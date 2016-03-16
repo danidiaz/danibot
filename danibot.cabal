@@ -36,6 +36,7 @@ library
           base                  >= 4        && < 5   
         , transformers          >= 0.4.3.0
         , wreq                  >= 0.4.1.0 
+        , network               >= 2.6
         , websockets            >= 0.9.6.0
         , wuss                  >= 1.0.2
         , aeson                 >= 0.11.0.0
