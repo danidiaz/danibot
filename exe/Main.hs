@@ -5,7 +5,10 @@ module Main (
 import Network.Danibot (dumbHandler)
 import Network.Danibot.Main (mainWith)
 
+import Options.Applicative 
+import qualified Options.Applicative as Options
+
 main :: IO ()
-main = mainWith dumbHandler 
+main = mainWith (pure (Right dumbHandler))
 
 

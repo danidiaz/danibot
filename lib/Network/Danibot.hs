@@ -10,7 +10,7 @@ import Control.Concurrent
 
 dumbHandler :: Text -> IO Text
 dumbHandler _ = do 
-    threadDelay 1e6
+    threadDelay 0.5e6
     return "I don't do anything yet."
 
 
