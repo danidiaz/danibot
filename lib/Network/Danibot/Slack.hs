@@ -52,16 +52,16 @@ eventFold pool cs =
                 if has (ims.ix channel_) currentcs 
                   then -- IM message?
                     case isDirectedTo text_ of
-                        Just (target,text') | target == whoami -> do
+                        Just (target,text') | user_ /= whoami && target == whoami -> do
                             atomically (writeTChan pool 
                                                    (text',send))
-                        Nothing -> do
+                        Nothing             | user_ /= whoami -> do
                             atomically (writeTChan pool 
                                                    (text_,send))
                         _ -> pure ()
                   else -- message in general channel? 
                     case isDirectedTo text_ of
-                        Just (target,text') | target == whoami -> do
+                        Just (target,text') | user_ /= whoami && target == whoami -> do
                             atomically (writeTChan pool 
                                                    (text',send . addressTo user_))
                         _ -> pure ()
