@@ -49,6 +49,7 @@ library
         , conceit               >= 0.4.0.0
         , attoparsec            >= 0.13
         , stm                   >= 2.4.4
+        , async                 >= 2.1.0
         , foldl                 >= 1.1.5
         , streaming             >= 0.1.4
     exposed-modules:
