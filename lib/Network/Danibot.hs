@@ -27,8 +27,6 @@ dumbHandler _ = do
 
 isUpHandler :: Text -> IO Text
 isUpHandler (Text.break isSpace . Text.strip -> (Text.strip -> host,Text.strip -> port)) = do 
-    print host
-    print (extractAddress host)
     case (extractAddress host, readMaybe (Text.unpack port)) of
         (Right host', Just numericport) -> do
             let attempt =
