@@ -8,16 +8,21 @@ The bot reads the Slack api token from the environment variable
 
 The default danibot executable comes with a few example handlers:
 
-- *up? host port* Checks if a port is open in a host.
+- *up? host port* 
 
-- *lookup key* Checks the value of key in a dictionary that is loaded at
+  Checks if a port is open in a host.
+
+- *lookup key* 
+
+  Checks the value of key in a dictionary that is loaded at
   startup with the --dict parameter. The dictionary is a json object with
   string values.
 
-- *help* Lists available options.
+- *help* 
+
+  Lists available options.
 
 To create your own customized bot, import `Network.Danibot.Main` and pass a
 value of type `IO (Either String (Text -> IO Text))` to `mainWith`, where `Text
 -> IO Text` is the type of the handler function.
-
 
