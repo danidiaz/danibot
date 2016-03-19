@@ -4,6 +4,7 @@
 
 module Network.Danibot.Main (
         mainWith
+    ,   readJSON
     ) where
 
 import Data.Function ((&))
@@ -12,6 +13,7 @@ import Data.Text (Text)
 import Data.String
 import Data.Aeson (FromJSON,eitherDecodeStrict')
 
+import Control.Exception
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
@@ -20,7 +22,7 @@ import qualified Control.Foldl as Foldl
 import Control.Concurrent.Conceit
 
 import System.Environment (lookupEnv)
-import GHC.Generics
+import System.IO
 
 import Network.Danibot.Slack 
 import Network.Danibot.Slack.Types (introUrl,introChat)
@@ -36,26 +38,12 @@ slack_api_token_env_var_missing =
     slack_api_token_env_var ++
     " not found."
 
---data Conf = Conf
---    {
---        slack_api_token :: Text
---    } deriving (Generic,Show)
---
---instance FromJSON Conf
---
---data Args = Args
---    {
---        confPath :: String
---    } deriving (Show)
---
---parserInfo :: Options.ParserInfo Args
---parserInfo = 
---    info (helper <*> parser) infoMod
---  where
---    parser = 
---        Args <$> strArgument (help "configuration file" <> metavar "CONF")
---    infoMod = 
---        fullDesc <> header "program desc" 
+readJSON :: FromJSON a => FilePath -> IO a
+readJSON path = do
+    bytes <- Bytes.readFile path
+    case eitherDecodeStrict' bytes of 
+        Right dict -> pure dict
+        Left  err  -> throwIO (userError err)
 
 exceptMain :: IO (Either String (Text -> IO Text)) -> ExceptT String IO ()
 exceptMain handlerio = do

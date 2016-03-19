@@ -8,7 +8,7 @@ Copyright: 2015 Daniel Diaz
 Author: Daniel Diaz
 Maintainer: diaz_carrete@yahoo.com
 Bug-Reports: https://github.com/danidiaz/danibot/issues
-Synopsis: Slack bot.
+Synopsis: Basic Slack bot framework.
 Category: Network
 
 extra-source-files:
