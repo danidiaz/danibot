@@ -22,6 +22,8 @@ The default danibot executable comes with a few example handlers:
 
   Lists available options.
 
+Right now the bot ignores most chat events apart from messages.
+
 To create your own customized bot, import `Network.Danibot.Main` and pass a
 value of type `IO (Either String (Text -> IO Text))` to `mainWith`, where `Text
 -> IO Text` is the type of the handler function.

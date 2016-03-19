@@ -3,7 +3,9 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Network.Danibot (
-       dumbHandler
+       Command
+    ,  Description
+    ,  dumbHandler
     ,  lookupHandler
     ,  isUpHandler
     ,  helpHandler
@@ -26,19 +28,32 @@ import Network
 import System.IO
 import Control.Exception
 
-dumbHandler :: (Text -> IO Text,Text)
+type Command = Text
+
+type Description = Text
+
+{-| Waits half a second, does nothing.		
+
+-}
+dumbHandler :: (Text -> IO Text,Description)
 dumbHandler = 
     let go _ = do 
             threadDelay 0.5e6
             return "Nothing was done."
     in  (go,"")
 
-lookupHandler :: Map Text Text -> (Text -> IO Text,Text) 
+{-| Performs lookups against an in-memory map.		
+
+-}
+lookupHandler :: Map Text Text -> (Text -> IO Text,Description) 
 lookupHandler aMap = 
     let go key = pure (maybe "Entry not found." id (Map.lookup key aMap))
     in  (go,"key") 
 
-isUpHandler :: (Text -> IO Text,Text)
+{-| Is the given port listening on the given host?		
+
+-}
+isUpHandler :: (Text -> IO Text,Description)
 isUpHandler =
     let go (Text.break isSpace . Text.strip -> (Text.strip -> host,Text.strip -> port)) = do 
             case (extractAddress host, readMaybe (Text.unpack port)) of
@@ -67,7 +82,10 @@ isUpHandler =
             <|>
             Atto.takeText
 
-helpHandler :: [(Text,(Text -> IO Text,Text))] -> (Text -> IO Text, Text)
+{-| Builds the help message.		
+
+-}
+helpHandler :: [(Command,(Text -> IO Text,Description))] -> (Text -> IO Text, Description)
 helpHandler handlers = 
     let helptext = mconcat (intersperse "\n" [k <> " " <> v | (k,(_,v)) <- handlers])
     in  (\_ -> pure helptext,"")
@@ -75,7 +93,10 @@ helpHandler handlers =
 splitWord :: Text -> (Text,Text)
 splitWord (Text.break isSpace . Text.strip -> (Text.strip -> word,Text.strip -> rest)) =  (word,rest)
 
-dispatch :: [(Text,(Text -> IO Text,Text))] -> Text -> IO Text
+{-| Builds a handler from a list of command names and sub-handlers.		
+
+-}
+dispatch :: [(Command,(Text -> IO Text,x))] -> Text -> IO Text
 dispatch (Map.fromList -> handlers) (splitWord -> (key,request)) =   
     case Map.lookup key handlers of
         Just (f,_) -> f request

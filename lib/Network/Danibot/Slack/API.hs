@@ -16,6 +16,10 @@ import Network.Danibot.Slack.Types (Wire(..),Intro(..))
 
 type AuthToken = Text
 
+{-| Start a connection with the Slack RTM and return the initial state of the
+    chat. 		
+
+-}
 startRTM :: AuthToken -> IO (Either String Intro)
 startRTM authToken = do 
     resp <- Wreq.postWith (withToken authToken) 

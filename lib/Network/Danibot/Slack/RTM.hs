@@ -40,8 +40,11 @@ fromWSSURI uri =
         Just uri' -> case Textual.break_ True (=='/') uri' of
             (host,web) -> Right (WSSEndpoint host web)
 
-ws :: FoldM IO Event ()
-   -> Stream (Of OutboundMessage) IO ()
+{-| Connect to the Slack RTM websocket.		
+
+-}
+ws :: FoldM IO Event () -- ^ Fold for processing incoming messages.
+   -> Stream (Of OutboundMessage) IO () -- ^ Stream that produces outbound messages.
    -> Webs.ClientApp ()
 ws eventFold messageStream connection = 
     let conceited =

@@ -18,6 +18,9 @@ import Control.Lens (Lens',lens)
 
 import GHC.Generics
 
+{-| Newtype that marks the values that go "over the wire".		
+
+-}
 newtype Wire a = Wire { unWire :: a } deriving (Show,Functor)
 
 instance Identified i => Identified (Wire i) where
@@ -29,6 +32,9 @@ class Identified i where
 class Named n where
     name :: n -> Text
 
+{-| The initial information returned by the Slack API when the RTM is started.
+
+-}
 data Intro = Intro
     {
         introUrl :: Text

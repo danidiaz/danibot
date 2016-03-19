@@ -24,7 +24,13 @@ import Control.Concurrent.STM.TChan
 
 import Network.Danibot.Slack.Types 
 
-worker :: (Text -> IO Text) -> IO (TChan (Text,Text -> IO ()), IO ()) 
+{-| Takes a request handling function, returns a channel that takes
+    (requests,post-processing actions) along with a worker action that drains the
+    channel and forks a thread for each request.	
+
+-}
+worker :: (Text -> IO Text) -- ^ A request handler function.
+       -> IO (TChan (Text,Text -> IO ()), IO ()) -- ^ Action that creates the request channel and worker action.
 worker handler = do
     chan <- atomically newTChan  
     let go = forever (do (task,post) <- atomically (readTChan chan)
@@ -33,6 +39,9 @@ worker handler = do
                              post result))
     pure (chan,go)                            
 
+{-| Builds a Fold that consumes messages coming from the Slack RTM connection.		
+
+-}
 eventFold :: TChan (Text,Text -> IO ()) 
           -> ChatState
           -> FoldM IO Event ()

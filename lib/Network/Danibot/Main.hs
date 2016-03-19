@@ -38,6 +38,9 @@ slack_api_token_env_var_missing =
     slack_api_token_env_var ++
     " not found."
 
+{-| Read a configuration value from a JSON file.		
+
+-}
 readJSON :: FromJSON a => FilePath -> IO a
 readJSON path = do
     bytes <- Bytes.readFile path
@@ -61,6 +64,10 @@ exceptMain handlerio = do
     liftIO (_runConceit (_Conceit (loopRTM theEventFold source endpoint) 
                          *> _Conceit workerAction))
 
+{-| Create a main from an action that either fails with an error or returns a
+    handler for incoming messages.		
+
+-}
 mainWith :: IO (Either String (Text -> IO Text)) -> IO ()
 mainWith handlerio = do
     final <- runExceptT (exceptMain handlerio)
